@@ -1,0 +1,36 @@
+name: MicroPython Logic Capture Workflow
+
+on:
+  workflow_call:
+    inputs:
+      STUFF_NAME:
+        description:
+          "The good stuff man"
+        default: 'boom'
+        required: false
+        type: string
+
+
+env:
+  GITHUB_REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+
+jobs:
+  deploy-and-capture:
+    runs-on: ubuntu-24.04-arm # similar to RPi...
+    steps:
+      - uses: actions/checkout@v4
+      - name: Say hi
+        run: |
+          pip install logic2-automation
+          
+          pipx install mpremote
+          mpremote version
+          echo "Gosh"
+
+          wget -q "https://logic2api.saleae.com/download?os=linux&arch=x64" -O Logic.AppImage
+          
+          ls -la
+          chmod +x Logic.AppImage
+          
+          ./Logic.AppImage --no-sandbox --automation
+          

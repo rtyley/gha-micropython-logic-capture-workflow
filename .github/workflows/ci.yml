@@ -1,0 +1,15 @@
+name: CI
+on:
+  workflow_dispatch:
+  pull_request:
+
+  # triggering CI on the default branch improves caching
+  # see https://docs.github.com/en/free-pro-team@latest/actions/guides/caching-dependencies-to-speed-up-workflows#restrictions-for-accessing-a-cache
+  push:
+    branches:
+      - main
+
+jobs:
+  test-capture:
+    uses: rtyley/gha-micropython-logic-capture-workflow/.github/workflows/reusable-capture.yml@main
+    permissions: { contents: read }
