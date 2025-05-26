@@ -27,6 +27,10 @@ jobs:
           mpremote version
           echo "Gosh"
 
+          sudo add-apt-repository universe
+          sudo apt install libfuse2t64
+
+
           wget -q "https://logic2api.saleae.com/download?os=linux&arch=x64" -O Logic.AppImage
           
           ls -la
