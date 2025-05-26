@@ -17,7 +17,7 @@ env:
 jobs:
   deploy-and-capture:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 4
     steps:
       - uses: actions/checkout@v4
       - name: Say hi
@@ -30,7 +30,7 @@ jobs:
 
           sudo add-apt-repository universe
           sudo apt install libfuse2t64
-          sudo apt install xvfb libatk1.0-0 libatk-bridge2.0-0 libcrypt
+          sudo apt install xvfb libatk1.0-0 libatk-bridge2.0-0 libxcrypt
           
           wget -q "https://logic2api.saleae.com/download?os=linux&arch=x64" -O Logic.AppImage
           
