@@ -30,7 +30,7 @@ jobs:
 
           sudo add-apt-repository universe
           sudo apt install libfuse2t64
-          sudo apt install xvfb libatk1.0-0 libatk-bridge2.0-0 libxcrypt
+          sudo apt install xvfb libatk1.0-0 libatk-bridge2.0-0 libcrypt1
           
           wget -q "https://logic2api.saleae.com/download?os=linux&arch=x64" -O Logic.AppImage
           
