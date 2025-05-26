@@ -17,6 +17,7 @@ env:
 jobs:
   deploy-and-capture:
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - name: Say hi
