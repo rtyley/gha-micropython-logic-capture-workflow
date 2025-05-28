@@ -21,3 +21,5 @@ jobs:
           mpremote version
           echo "Gosh"
           ls -la
+          
+          TerminalCapture capture /dev/ttyACM0 ~/poo/ht-capture.tcs foo.csv
