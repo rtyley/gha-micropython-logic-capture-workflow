@@ -10,13 +10,9 @@ on:
         required: false
         type: string
 
-
-env:
-  GITHUB_REPO_URL: ${{ github.server_url }}/${{ github.repository }}
-
 jobs:
   deploy-and-capture:
-    runs-on: ubuntu-24.04
+    runs-on: pico-logic
     timeout-minutes: 4
     steps:
       - uses: actions/checkout@v4
@@ -27,15 +23,3 @@ jobs:
           pipx install mpremote
           mpremote version
           echo "Gosh"
-
-          sudo add-apt-repository universe
-          sudo apt install libfuse2t64
-          sudo apt install xvfb libatk1.0-0 libatk-bridge2.0-0 libcrypt1
-          
-          wget -q "https://logic2api.saleae.com/download?os=linux&arch=x64" -O Logic.AppImage
-          
-          ls -la
-          chmod +x Logic.AppImage
-          
-          xvfb-run ./Logic.AppImage --no-sandbox --automation
-          
