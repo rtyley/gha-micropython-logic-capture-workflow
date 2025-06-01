@@ -11,5 +11,10 @@ on:
 
 jobs:
   test-capture:
-    uses: rtyley/gha-micropython-logic-capture-workflow/.github/workflows/reusable-capture.yml@main
-    permissions: { contents: read }
+    uses: ./.github/workflows/reusable-capture.yml
+    permissions: { id-token: write, contents: read }
+    with:
+      LOGIC_CAPTURE_FILE: "sample-project/logic-capture.yml"
+
+    secrets:
+      AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}

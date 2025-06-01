@@ -3,27 +3,45 @@ name: MicroPython Logic Capture Workflow
 on:
   workflow_call:
     inputs:
-      STUFF_NAME:
-        description:
-          "The good stuff man"
-        default: 'boom'
+      AWS_REGION:
+        default: 'eu-west-1'
         required: false
         type: string
+      LOGIC_CAPTURE_FILE:
+        default: 'logic-capture.yml'
+        required: false
+        type: string
+    secrets:
+      AWS_ACCOUNT:
+        description: 'AWS account'
+        required: true
+
+permissions:
+
+  id-token: write # This is required for requesting the JWT
+  contents: read  # This is required for actions/checkout
 
 jobs:
   deploy-and-capture:
-    runs-on: pico-logic
+    runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
       - uses: actions/checkout@v4
-      - name: Say hi
-        run: |
-          mpremote version
-          echo "Gosh"
-          ls -la
-          
-          TerminalCapture capture /dev/ttyACM0 ~/poo/ht-capture.tcs foo.csv
-      - uses: actions/upload-artifact@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
-          name: my-artifact
-          path: foo.csv
+          role-to-assume: "arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/github-action-worker"
+          aws-region: ${{ inputs.AWS_REGION }}
+      - name: Start step function
+        env:
+          CAPTURE_CONFIG_FILE: ${{ inputs.LOGIC_CAPTURE_FILE }}
+        run: |
+          BASE_64_ENCODED_CAPTURE_CONFIG_FILE=$( printf '%s' "$CAPTURE_CONFIG_FILE" | base64 )
+          echo $BASE_64_ENCODED_CAPTURE_CONFIG_FILE
+          INPUT_JSON='{ "githubToken": "${{ secrets.GITHUB_TOKEN }}", "repoGitUrl": "${{ github.repositoryUrl }}", "captureConfigFile": "'"$BASE_64_ENCODED_CAPTURE_CONFIG_FILE"'" }'
+          EXECUTION_ARN=$( aws stepfunctions start-execution --state-machine-arn "arn:aws:states:${{ inputs.AWS_REGION }}:${{ secrets.AWS_ACCOUNT }}:stateMachine:pico-logic-capture" --input "$(echo $INPUT_JSON | jq -R . )" --output text --query 'executionArn' )
+          
+          while [ $( aws stepfunctions describe-execution --execution-arn $EXECUTION_ARN --output text --query 'status' ) = 'RUNNING' ];
+          do
+              echo "...waiting"
+              sleep 5s
+          done
