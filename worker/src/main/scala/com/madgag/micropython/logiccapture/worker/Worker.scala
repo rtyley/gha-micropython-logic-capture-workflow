@@ -5,7 +5,7 @@ import cats.effect.{IO, IOApp}
 import com.madgag.micropython.logiccapture.worker.AWS.awsAccount
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.internal.storage.file.FileRepository
-import org.eclipse.jgit.transport.{CredentialsProvider, UsernamePasswordCredentialsProvider}
+import org.eclipse.jgit.transport.{CredentialsProvider, TransportHttp, UsernamePasswordCredentialsProvider}
 import org.virtuslab.yaml.*
 import os.SubPath
 import software.amazon.awssdk.services.sfn.model.GetActivityTaskRequest
@@ -13,9 +13,8 @@ import upickle.default.*
 
 import java.nio.charset.StandardCharsets
 import java.nio.charset.StandardCharsets.UTF_8
-import java.time.temporal.ChronoUnit
-import java.time.temporal.ChronoUnit.SECONDS
 import java.util.Base64
+import scala.jdk.CollectionConverters.*
 
 given uriRW: ReadWriter[SubPath] = readwriter[String].bimap[SubPath](_.toString, SubPath(_))
 
@@ -47,17 +46,16 @@ case class State(input: String) derives ReadWriter
 
 object Worker extends IOApp.Simple {
 
-  override val run: IO[Unit] = for {
-    captureTask <- fetchTaskIfAvailable()
-    _ <- IO.println(s"Hello, " + captureTask)
+  override val run: IO[Unit] = (for {
+    captureTaskOpt <- fetchTaskIfAvailable()
   } yield {
+    println(s"Got a task: ${captureTaskOpt.isDefined}")
     for {
-      task <- captureTask
+      task <- captureTaskOpt
     } {
       boom(task.jobDef)
     }
-    ()
-  }
+  }).foreverM
 
   private val activityTaskRequest: GetActivityTaskRequest =
     GetActivityTaskRequest.builder().activityArn(s"arn:aws:states:eu-west-1:$awsAccount:activity:pico-logic-capture").workerName("boom").build()
@@ -75,7 +73,10 @@ object Worker extends IOApp.Simple {
     val tempDir: os.Path = os.temp.dir()
 
     println(s"going to try a clone... to $tempDir")
-    val repository = Git.cloneRepository().setCredentialsProvider(git)
+    val repository = Git.cloneRepository() // .setCredentialsProvider(git)
+      .setTransportConfigCallback {
+        case transportHttp: TransportHttp => transportHttp.setAdditionalHeaders(Map("Authorization" -> s"Bearer ${Base64.getEncoder.encodeToString(jobDef.githubToken.getBytes(UTF_8))}").asJava)
+      }
       // .setBare(true)
       .setDirectory(tempDir.toIO).setURI(jobDef.repoHttpsGitUrl).call().getRepository.asInstanceOf[FileRepository]
 

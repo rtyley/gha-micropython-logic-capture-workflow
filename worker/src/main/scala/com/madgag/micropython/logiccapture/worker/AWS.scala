@@ -10,6 +10,8 @@ object AWS {
   val awsAccount = sys.env("AWS_ACCOUNT")
   val region: Region = EU_WEST_1
 
+  println("nnn"+sys.env("HOME"))
+
   def credentialsForDevAndProd(devProfile: String, prodCreds: AwsCredentialsProvider): AwsCredentialsProviderChain =
     AwsCredentialsProviderChain.of(prodCreds, ProfileCredentialsProvider.builder().profileName(devProfile).build())
 
