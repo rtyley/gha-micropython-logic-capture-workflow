@@ -10,11 +10,28 @@ on:
       - main
 
 jobs:
+  worker-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: everything
+      - run: |
+          shopt -s dotglob
+          mv everything/worker/* .
+          rm -Rf everything
+          ls -la
+      - uses: guardian/setup-scala@v1
+      - run: sbt -v ";test ;Debian / packageBin"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: worker-debian
+          path: target/pico-logic-capture-worker_*.deb
+
   test-capture:
     uses: ./.github/workflows/reusable-capture.yml
     permissions: { id-token: write, contents: read }
     with:
       LOGIC_CAPTURE_FILE: "sample-project/logic-capture.yml"
-
     secrets:
       AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
