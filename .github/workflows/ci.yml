@@ -22,11 +22,7 @@ jobs:
           rm -Rf everything
           ls -la
       - uses: guardian/setup-scala@v1
-      - run: sbt -v ";test ;Debian / packageBin"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: worker-debian
-          path: target/pico-logic-capture-worker_*.deb
+      - run: sbt -v test
 
   test-capture:
     uses: ./.github/workflows/reusable-capture.yml
