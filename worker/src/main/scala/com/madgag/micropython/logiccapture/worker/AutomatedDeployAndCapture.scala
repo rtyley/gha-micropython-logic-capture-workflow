@@ -1,41 +1,60 @@
 package com.madgag.micropython.logiccapture.worker
 
 import cats.effect.{IO, Resource}
+import com.madgag.micropython.logiccapture.worker.AutomatedDeployAndCapture.Error.{InvalidYaml, MissingConfig}
+import com.madgag.micropython.logiccapture.worker.aws.Fail
 import org.virtuslab.yaml.*
 import os.*
+import cats.*
+import cats.data.*
+import cats.syntax.all.*
+
+import scala.util.Try
 
 object AutomatedDeployAndCapture {
 
-  def process(workRoot: Path, captureConfigFileSubPath: SubPath, resultsDir: Path): Unit = {
+  sealed trait Error {
+    def causeDescription: String
+    def asFail: Fail = Fail(this.getClass.getSimpleName, causeDescription)
+  }
+  object Error {
+    case class MissingConfig(captureConfigFileSubPath: SubPath) extends Error {
+      override def causeDescription = s"Config file does not exist: $captureConfigFileSubPath"
+    }
+
+    case class InvalidYaml(yamlError: YamlError) extends Error {
+      override def causeDescription = yamlError.msg
+    }
+  }
+
+  def process(workRoot: Path, captureConfigFileSubPath: SubPath, resultsDir: Path): IO[Either[YamlConfigFile.Error, Option[String]]] = {
     println(s"path is ${sys.env("PATH")}")
     val captureConfigFile = workRoot / captureConfigFileSubPath
 
-    require(os.exists(captureConfigFile))
+    val errorOrConfig = YamlConfigFile.read[CaptureConfig](workRoot, captureConfigFileSubPath)
 
-    val captureConfig: Either[YamlError, CaptureConfig] = os.read(captureConfigFile).as[CaptureConfig]
-    println(captureConfig)
+    errorOrConfig.map { config =>
+      val configDir = os.Path((workRoot / captureConfigFileSubPath).toNIO.getParent)
 
-    val configDir = os.Path(captureConfigFile.toNIO.getParent)
+      execute(workRoot, resultsDir, configDir, config)
+    }.sequence
+  }
 
-    for {
-      cap: CaptureConfig <- captureConfig
-    } {
-      def repoSubPath(target: os.RelPath): SubPath = (target resolveFrom configDir) subRelativeTo workRoot
+  private def execute(workRoot: Path, resultsDir: Path, configDir: Path, cap: CaptureConfig): IO[Option[String]] = {
+    def repoSubPath(target: RelPath): SubPath = (target resolveFrom configDir) subRelativeTo workRoot
 
-      val mountFolder: SubPath = repoSubPath(cap.mountFolder)
-      val captureDef: SubPath = repoSubPath(cap.captureDef)
+    val mountFolder: SubPath = repoSubPath(cap.mountFolder)
+    val captureDef: SubPath = repoSubPath(cap.captureDef)
 
-      println(s"mountFolder: ${os.list(workRoot / mountFolder)}")
+    println(s"mountFolder: ${os.list(workRoot / mountFolder)}")
 
-      val captureResultsFile = resultsDir / "capture.csv"
+    val captureResultsFile = resultsDir / "capture.csv"
 
-      for {
-        mpremoteProcess <- Resource.fromAutoCloseable(IO(connectMPRemote(workRoot, mountFolder, cap)))
-        captureProcess <- Resource.fromAutoCloseable(IO(os.proc("TerminalCapture", "capture", "/dev/ttyACM0", workRoot / captureDef, captureResultsFile).spawn()))
-      } yield {
-        captureProcess.waitFor(10000)
-        println(os.size(captureResultsFile))
-      }
+    (for {
+      mpremoteProcess <- Resource.fromAutoCloseable(IO(connectMPRemote(workRoot, mountFolder, cap)))
+      captureProcess <- Resource.fromAutoCloseable(IO(os.proc("TerminalCapture", "capture", "/dev/ttyACM0", workRoot / captureDef, captureResultsFile).spawn()))
+    } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
+      IO.blocking(captureProcess.waitFor(10000)) >> IO(Try(os.read(captureResultsFile)).toOption)
     }
   }
 

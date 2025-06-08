@@ -32,6 +32,12 @@ class StepFuncActivityClient(sfn: SfnAsyncClient, awsAccount: String) {
     glurk(request)(_.sendTaskSuccess)
   }
 
+  def sendFail(token: Token, fail: Fail): IO[SendTaskFailureResponse] = {
+    val request =
+      SendTaskFailureRequest.builder().taskToken(token.str).cause(fail.cause).error(fail.error).build()
+    glurk(request)(_.sendTaskFailure)
+  }
+
   def sendHeartbeat(token: Token): IO[SendTaskHeartbeatResponse] = {
     val request = SendTaskHeartbeatRequest.builder().taskToken(token.str).build()
     glurk(request)(_.sendTaskHeartbeat)

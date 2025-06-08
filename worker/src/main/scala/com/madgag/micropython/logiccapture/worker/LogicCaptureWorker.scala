@@ -1,5 +1,6 @@
 package com.madgag.micropython.logiccapture.worker
 
+import cats.effect.IO
 import com.madgag.micropython.logiccapture.worker.LogicCaptureWorker.JobDef
 import com.madgag.micropython.logiccapture.worker.aws.{ActivityWorker, Fail, Heartbeat}
 import com.madgag.micropython.logiccapture.worker.git.BearerAuthTransportConfig
@@ -10,9 +11,9 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import os.{Path, SubPath}
 import upickle.default.*
 
-class LogicCaptureWorker extends ActivityWorker[JobDef, Unit] {
+class LogicCaptureWorker extends ActivityWorker[JobDef, Option[String]] {
 
-  override def process(jobDef: JobDef, heartbeat: Heartbeat): Either[Fail, Unit] = {
+  override def process(jobDef: JobDef, heartbeat: Heartbeat): IO[Either[Fail, Option[String]]] = {
     val tempDir: Path = os.temp.dir()
     val repoContainerDir = tempDir / "repo"
     val resultsDir: Path = tempDir / "results"
@@ -21,8 +22,7 @@ class LogicCaptureWorker extends ActivityWorker[JobDef, Unit] {
 
     heartbeat.send()
 
-    AutomatedDeployAndCapture.process(repoDir, jobDef.captureConfigFile.value, resultsDir)
-    Right(())
+    AutomatedDeployAndCapture.process(repoDir, jobDef.captureConfigFile.value, resultsDir).map(_.left.map(_.asFail))
   }
 
   def cloneRepo(jobDef: JobDef, repoContainerDir: Path): Path = {
