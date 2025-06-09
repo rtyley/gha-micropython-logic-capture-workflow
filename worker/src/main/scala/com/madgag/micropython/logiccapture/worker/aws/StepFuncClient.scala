@@ -1,10 +1,11 @@
 package com.madgag.micropython.logiccapture.worker.aws
 
 import cats.effect.IO
-import com.madgag.micropython.logiccapture.worker.aws.StepFuncClient.{GetTaskResponse, State, Token}
+import com.madgag.micropython.logiccapture.worker.aws.StepFuncClient.{GetTaskResponse, State}
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.sfn.SfnAsyncClient
 import software.amazon.awssdk.services.sfn.model.*
+import ujson.Value
 import upickle.default.*
 
 import java.util.concurrent.CompletableFuture
@@ -21,26 +22,17 @@ class StepFuncActivityClient(sfn: SfnAsyncClient, awsAccount: String) {
     for {
       resp <- glurk(activityTaskRequest)(_.getActivityTask)
     } yield for {
-      token <- Option(resp.taskToken())
+      tokenText <- Option(resp.taskToken())
       input <- Option(resp.input())
-    } yield GetTaskResponse(Token(token), ujson.read(read[State](input).input))
-  }
+    } yield new GetTaskResponse(ujson.read(read[State](input).input), new TaskLease {
+      override val heartbeat: Heartbeat = () => glurk(SendTaskHeartbeatRequest.builder().taskToken(tokenText).build())(_.sendTaskHeartbeat)
 
-  def sendSuccess(token: Token, output: ujson.Value): IO[SendTaskSuccessResponse] = {
-    val request =
-      SendTaskSuccessRequest.builder().taskToken(token.str).output(ujson.write(output)).build()
-    glurk(request)(_.sendTaskSuccess)
-  }
+      override def sendSuccess(output: Value): IO[SendTaskSuccessResponse] =
+        glurk(SendTaskSuccessRequest.builder().taskToken(tokenText).output(ujson.write(output)).build())(_.sendTaskSuccess)
 
-  def sendFail(token: Token, fail: Fail): IO[SendTaskFailureResponse] = {
-    val request =
-      SendTaskFailureRequest.builder().taskToken(token.str).cause(fail.cause).error(fail.error).build()
-    glurk(request)(_.sendTaskFailure)
-  }
-
-  def sendHeartbeat(token: Token): IO[SendTaskHeartbeatResponse] = {
-    val request = SendTaskHeartbeatRequest.builder().taskToken(token.str).build()
-    glurk(request)(_.sendTaskHeartbeat)
+      override def sendFail(fail: Fail): IO[SendTaskFailureResponse] =
+        glurk(SendTaskFailureRequest.builder().taskToken(tokenText).cause(fail.cause).error(fail.error).build())(_.sendTaskFailure)
+    })
   }
 
   private def glurk[A <: SfnRequest, B](request: A)(f: SfnAsyncClient => A => CompletableFuture[B]): IO[B] =
@@ -58,5 +50,5 @@ object StepFuncClient {
   extension (x: Token)
     def str: String = x
 
-  case class GetTaskResponse(token: Token, input: ujson.Value)
+  class GetTaskResponse(val input: ujson.Value, val lease: TaskLease)
 }

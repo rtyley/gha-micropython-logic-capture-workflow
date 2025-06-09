@@ -4,7 +4,7 @@ import cats.*
 import cats.effect.{IO, IOApp}
 import com.madgag.micropython.logiccapture.worker.LogicCaptureWorker.JobDef
 import com.madgag.micropython.logiccapture.worker.aws.StepFuncClient.GetTaskResponse
-import com.madgag.micropython.logiccapture.worker.aws.{AWS, StepFuncActivityClient}
+import com.madgag.micropython.logiccapture.worker.aws.{AWS, StepFuncActivityClient, TaskLease}
 import upickle.default.*
 
 object Worker extends IOApp.Simple {
@@ -14,14 +14,11 @@ object Worker extends IOApp.Simple {
   val activityWorker: LogicCaptureWorker = new LogicCaptureWorker()
 
   override val run: IO[Unit] = (for {
-    captureTaskOpt <- activityClient.fetchTaskIfAvailable("pico-logic-capture")
-  } yield captureTaskOpt.fold(IO(()), handleTask)).foreverM
+    taskOpt: Option[GetTaskResponse] <- activityClient.fetchTaskIfAvailable("pico-logic-capture")
+  } yield taskOpt.fold(IO(()), handleTask)).foreverM
 
   def handleTask(task: GetTaskResponse): IO[Unit] = for {
-    result <- activityWorker.process(read[JobDef](task.input), () => activityClient.sendHeartbeat(task.token))
-  } yield result.fold(
-    fail => activityClient.sendFail(task.token, fail),
-    res => activityClient.sendSuccess(task.token, res)
-  )
+    result <- activityWorker.process(read[JobDef](task.input), task.lease.heartbeat)
+  } yield result.fold(task.lease.sendFail, task.lease.sendSuccess)
 
 }
