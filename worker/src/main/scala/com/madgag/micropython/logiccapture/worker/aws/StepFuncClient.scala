@@ -10,18 +10,19 @@ import upickle.default.*
 
 import java.util.concurrent.CompletableFuture
 
-class StepFuncActivityClient(sfn: SfnAsyncClient, awsAccount: String) {
+class StepFuncActivityClient(sfn: SfnAsyncClient, awsAccount: String, activityName: String) {
   private val region: Region = sfn.serviceClientConfiguration().region()
 
-  def fetchTaskIfAvailable(activityName: String): IO[Option[GetTaskResponse]] = {
-    val activityTaskRequest =
-      GetActivityTaskRequest.builder().activityArn(
-        s"arn:aws:states:${region.id}:$awsAccount:activity:$activityName"
-      ).workerName("boom").build()
+  private val activityTaskRequest: GetActivityTaskRequest =
+    GetActivityTaskRequest.builder().activityArn(
+      s"arn:aws:states:${region.id}:$awsAccount:activity:$activityName"
+    ).workerName("boom").build()
 
+  def fetchTaskIfAvailable(): IO[Option[GetTaskResponse]] = for {
+    resp <- glurk(activityTaskRequest)(_.getActivityTask)
+  } yield {
+    println(resp)
     for {
-      resp <- glurk(activityTaskRequest)(_.getActivityTask)
-    } yield for {
       tokenText <- Option(resp.taskToken())
       input <- Option(resp.input())
     } yield new GetTaskResponse(ujson.read(read[State](input).input), new TaskLease {
@@ -36,7 +37,7 @@ class StepFuncActivityClient(sfn: SfnAsyncClient, awsAccount: String) {
   }
 
   private def glurk[A <: SfnRequest, B](request: A)(f: SfnAsyncClient => A => CompletableFuture[B]): IO[B] =
-    IO.fromCompletableFuture(IO(f(sfn)(request)))
+    IO(println(s"Sending $request")) >> IO.fromCompletableFuture(IO(f(sfn)(request)))
 }
 
 object StepFuncClient {

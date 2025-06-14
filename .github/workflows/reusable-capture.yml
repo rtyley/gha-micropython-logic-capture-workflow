@@ -50,5 +50,7 @@ jobs:
           echo "Final status: $FINAL_STATUS"
           if [[ $FINAL_STATUS != 'SUCCEEDED' ]] ; then
             echo "Game over!"
+            aws stepfunctions describe-execution --execution-arn $EXECUTION_ARN --output text --query 'error'
+            aws stepfunctions describe-execution --execution-arn $EXECUTION_ARN --output text --query 'cause'
             exit 1
           fi

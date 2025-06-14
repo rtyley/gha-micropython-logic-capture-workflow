@@ -9,6 +9,9 @@ on:
     branches:
       - main
 
+  schedule:
+    - cron: "29 */6 * * *"
+
 jobs:
   worker-ci:
     runs-on: ubuntu-latest

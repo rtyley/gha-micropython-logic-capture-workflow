@@ -13,26 +13,26 @@ import upickle.default.*
 
 class LogicCaptureWorker extends ActivityWorker[JobDef, Option[String]] {
 
-  override def process(jobDef: JobDef, heartbeat: Heartbeat): IO[Either[Fail, Option[String]]] = {
+  override def process(jobDef: JobDef)(using heartbeat: Heartbeat): IO[Either[Fail, Option[String]]] = {
     val tempDir: Path = os.temp.dir()
-    val repoContainerDir = tempDir / "repo"
-    val resultsDir: Path = tempDir / "results"
-
-    val repoDir: Path = cloneRepo(jobDef, repoContainerDir)
-
-    heartbeat.send()
-
-    AutomatedDeployAndCapture.process(repoDir, jobDef.captureConfigFile.value, resultsDir).map(_.left.map(_.asFail))
+    for {
+      repoDir <- cloneRepo(jobDef, tempDir / "repo")
+      res <- AutomatedDeployAndCapture.process(repoDir, jobDef.captureConfigFile.value, tempDir / "results").map(_.left.map(_.asFail))
+    } yield res
   }
 
-  def cloneRepo(jobDef: JobDef, repoContainerDir: Path): Path = {
-    println(s"going to try a clone... to $repoContainerDir")
-    val repository = Git.cloneRepository()
-      .setCredentialsProvider(new UsernamePasswordCredentialsProvider("", ""))
-      .setTransportConfigCallback(bearerAuth(jobDef.githubToken))
-      .setDirectory(repoContainerDir.toIO).setURI(jobDef.repoHttpsGitUrl).call().getRepository.asInstanceOf[FileRepository]
+  def cloneRepo(jobDef: JobDef, repoContainerDir: Path)(using heartbeat: Heartbeat): IO[Path] = {
+    IO {
+      println(s"going to try a clone... to $repoContainerDir")
+      val repository = Git.cloneRepository()
+        .setCredentialsProvider(new UsernamePasswordCredentialsProvider("", ""))
+        .setTransportConfigCallback(bearerAuth(jobDef.githubToken))
+        .setDirectory(repoContainerDir.toIO).setURI(jobDef.repoHttpsGitUrl).call().getRepository.asInstanceOf[FileRepository]
 
-    os.Path(repository.getWorkTree)
+      println(s"Clone is done, right? $repository")
+      os.Path(repository.getWorkTree)
+      
+    }.flatTap(_ => heartbeat.send())
   }
 }
 

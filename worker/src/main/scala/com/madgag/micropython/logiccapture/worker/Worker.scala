@@ -9,16 +9,21 @@ import upickle.default.*
 
 object Worker extends IOApp.Simple {
 
-  private val activityClient: StepFuncActivityClient = new StepFuncActivityClient(AWS.SFN, AWS.awsAccount)
+  private val activityClient: StepFuncActivityClient =
+    new StepFuncActivityClient(AWS.SFN, AWS.awsAccount, "pico-logic-capture")
 
   val activityWorker: LogicCaptureWorker = new LogicCaptureWorker()
 
-  override val run: IO[Unit] = (for {
-    taskOpt: Option[GetTaskResponse] <- activityClient.fetchTaskIfAvailable("pico-logic-capture")
-  } yield taskOpt.fold(IO(()), handleTask)).foreverM
+  private val boom: IO[Unit] = for {
+    taskOpt: Option[GetTaskResponse] <- activityClient.fetchTaskIfAvailable()
+    rem <- taskOpt.fold(IO(()))(handleTask)
+  } yield rem
+
+  override val run: IO[Unit] = boom.foreverM
 
   def handleTask(task: GetTaskResponse): IO[Unit] = for {
-    result <- activityWorker.process(read[JobDef](task.input), task.lease.heartbeat)
-  } yield result.fold(task.lease.sendFail, task.lease.sendSuccess)
+    result <- activityWorker.process(read[JobDef](task.input))(using task.lease.heartbeat)
+    _ <- result.fold(task.lease.sendFail, res => task.lease.sendSuccess(writeJs(res)))
+  } yield ()
 
 }

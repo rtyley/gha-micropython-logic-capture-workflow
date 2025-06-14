@@ -1,7 +1,7 @@
 package com.madgag.micropython.logiccapture.worker.aws
 
 import cats.effect.IO
-import software.amazon.awssdk.services.sfn.model.{SendTaskFailureResponse, SendTaskSuccessResponse}
+import software.amazon.awssdk.services.sfn.model.{SendTaskFailureResponse, SendTaskHeartbeatResponse, SendTaskSuccessResponse}
 
 trait TaskLease {
   val heartbeat: Heartbeat
@@ -12,7 +12,7 @@ trait TaskLease {
 }
 
 trait Heartbeat {
-  def send(): Unit
+  def send(): IO[SendTaskHeartbeatResponse]
 }
 
 case class Fail(error: String, cause: String) {
@@ -21,5 +21,5 @@ case class Fail(error: String, cause: String) {
 }
 
 trait ActivityWorker[In, Out] {
-  def process(input: In, heartbeat: Heartbeat): IO[Either[Fail, Out]]
+  def process(input: In)(using heartbeat: Heartbeat): IO[Either[Fail, Out]]
 }
