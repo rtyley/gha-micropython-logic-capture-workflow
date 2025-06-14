@@ -45,3 +45,10 @@ jobs:
               echo "...waiting"
               sleep 5s
           done
+          
+          FINAL_STATUS=$( aws stepfunctions describe-execution --execution-arn $EXECUTION_ARN --output text --query 'status' )
+          echo "Final status: $FINAL_STATUS"
+          if [[ $FINAL_STATUS != 'SUCCEEDED' ]] ; then
+            echo "Game over!"
+            exit 1
+          fi
