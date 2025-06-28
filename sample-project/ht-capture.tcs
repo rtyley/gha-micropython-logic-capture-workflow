@@ -15,7 +15,7 @@
   "Bursts": [],
   "TriggerType": 0,
   "TriggerChannel": 1,
-  "TriggerInverted": false,
+  "TriggerInverted": true,
   "TriggerBitCount": 0,
   "TriggerPattern": 0
 }
