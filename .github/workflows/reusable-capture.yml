@@ -53,4 +53,7 @@ jobs:
             aws stepfunctions describe-execution --execution-arn $EXECUTION_ARN --output text --query 'error'
             aws stepfunctions describe-execution --execution-arn $EXECUTION_ARN --output text --query 'cause'
             exit 1
+
+          else
+            aws stepfunctions describe-execution --execution-arn $EXECUTION_ARN --output text --query 'state'
           fi

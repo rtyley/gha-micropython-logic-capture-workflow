@@ -19,8 +19,7 @@ def blink():
     nop()          [31]
     wrap()
 
-# Instantiate a state machine with the blink program, at 2000Hz, with set bound to Pin(25) (LED on the Pico board)
-sm = rp2.StateMachine(0, blink, freq=2000, set_base=Pin(25))
+sm = rp2.StateMachine(0, blink, freq=2289, set_base=Pin(2))
 
 # Run the state machine for 3 seconds.  The LED should blink.
 sm.active(1)

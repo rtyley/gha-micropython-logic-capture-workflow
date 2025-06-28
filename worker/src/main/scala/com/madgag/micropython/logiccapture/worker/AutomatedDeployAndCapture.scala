@@ -36,7 +36,8 @@ object AutomatedDeployAndCapture {
     errorOrConfig.map { config =>
       val configDir = os.Path((workRoot / captureConfigFileSubPath).toNIO.getParent)
 
-      execute(workRoot, resultsDir, configDir, config)
+      val foo: IO[Option[String]] = execute(workRoot, resultsDir, configDir, config)
+      foo.flatTap(result => IO(println(s"Captured stuff was: ${result.map(_.take(40))}")))
     }.sequence
   }
 
