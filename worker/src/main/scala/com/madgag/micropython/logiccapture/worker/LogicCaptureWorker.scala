@@ -11,9 +11,9 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import os.{Path, SubPath}
 import upickle.default.*
 
-class LogicCaptureWorker extends ActivityWorker[JobDef, Option[String]] {
+class LogicCaptureWorker extends ActivityWorker[JobDef, CaptureResult] {
 
-  override def process(jobDef: JobDef)(using heartbeat: Heartbeat): IO[Either[Fail, Option[String]]] = {
+  override def process(jobDef: JobDef)(using heartbeat: Heartbeat): IO[Either[Fail, CaptureResult]] = {
     val tempDir: Path = os.temp.dir()
     for {
       repoDir <- cloneRepo(jobDef, tempDir / "repo")
@@ -31,7 +31,7 @@ class LogicCaptureWorker extends ActivityWorker[JobDef, Option[String]] {
 
       println(s"Clone is done, right? $repository")
       os.Path(repository.getWorkTree)
-      
+
     }.flatTap(_ => heartbeat.send())
   }
 }

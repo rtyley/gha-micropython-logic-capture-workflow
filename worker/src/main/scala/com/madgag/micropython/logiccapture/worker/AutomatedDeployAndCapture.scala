@@ -8,8 +8,17 @@ import os.*
 import cats.*
 import cats.data.*
 import cats.syntax.all.*
+import cats.effect.IO
+import com.madgag.micropython.logiccapture.worker.aws.StepFuncClient.{GetTaskResponse, State}
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.sfn.SfnAsyncClient
+import software.amazon.awssdk.services.sfn.model.*
+import ujson.Value
+import upickle.default.*
 
 import scala.util.Try
+
+case class CaptureResult(captureProcessOutput: String, capturedData: Option[String]) derives ReadWriter
 
 object AutomatedDeployAndCapture {
 
@@ -27,7 +36,7 @@ object AutomatedDeployAndCapture {
     }
   }
 
-  def process(workRoot: Path, captureConfigFileSubPath: SubPath, resultsDir: Path): IO[Either[YamlConfigFile.Error, Option[String]]] = {
+  def process(workRoot: Path, captureConfigFileSubPath: SubPath, resultsDir: Path): IO[Either[YamlConfigFile.Error, CaptureResult]] = {
     println(s"path is ${sys.env("PATH")}")
     val captureConfigFile = workRoot / captureConfigFileSubPath
 
@@ -36,12 +45,12 @@ object AutomatedDeployAndCapture {
     errorOrConfig.map { config =>
       val configDir = os.Path((workRoot / captureConfigFileSubPath).toNIO.getParent)
 
-      val foo: IO[Option[String]] = execute(workRoot, resultsDir, configDir, config)
-      foo.flatTap(result => IO(println(s"Captured stuff was: ${result.map(_.take(40))}")))
+      execute(workRoot, resultsDir, configDir, config)
+        .flatTap(result => IO(println(s"Captured stuff was: ${result.capturedData.map(_.take(40))}")))
     }.sequence
   }
 
-  private def execute(workRoot: Path, resultsDir: Path, configDir: Path, cap: CaptureConfig): IO[Option[String]] = {
+  private def execute(workRoot: Path, resultsDir: Path, configDir: Path, cap: CaptureConfig): IO[CaptureResult] = {
     def repoSubPath(target: RelPath): SubPath = (target resolveFrom configDir) subRelativeTo workRoot
 
     val mountFolder: SubPath = repoSubPath(cap.mountFolder)
@@ -49,13 +58,15 @@ object AutomatedDeployAndCapture {
 
     println(s"mountFolder: ${os.list(workRoot / mountFolder)}")
 
-    val captureResultsFile = resultsDir / "capture.csv"
+    os.makeDir.all(resultsDir)
+    val captureResultsFile: Path = resultsDir / "capture.csv"
+    println(s"captureResultsFile=$captureResultsFile")
 
     (for {
       mpremoteProcess <- Resource.fromAutoCloseable(IO(connectMPRemote(workRoot, mountFolder, cap)))
       captureProcess <- Resource.fromAutoCloseable(IO(os.proc("TerminalCapture", "capture", "/dev/ttyACM0", workRoot / captureDef, captureResultsFile).spawn()))
     } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
-      IO.blocking(captureProcess.waitFor(10000)) >> IO(Try(os.read(captureResultsFile)).toOption)
+      IO.blocking(captureProcess.waitFor(10000)) >> IO(CaptureResult(captureProcess.stdout.trim(), Try(os.read(captureResultsFile)).toOption))
     }
   }
 

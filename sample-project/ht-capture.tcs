@@ -1,20 +1,20 @@
 {
-  "Frequency": 1000000,
+  "Frequency": 10000,
   "PreTriggerSamples": 512,
-  "PostTriggerSamples": 65000,
+  "PostTriggerSamples": 6000,
   "TotalSamples": 65512,
   "LoopCount": 0,
   "MeasureBursts": false,
   "CaptureChannels": [
     {
-      "ChannelNumber": 1,
+      "ChannelNumber": 0,
       "ChannelName": "Output",
       "Hidden": false
     }
   ],
   "Bursts": [],
   "TriggerType": 0,
-  "TriggerChannel": 1,
+  "TriggerChannel": 0,
   "TriggerInverted": true,
   "TriggerBitCount": 0,
   "TriggerPattern": 0

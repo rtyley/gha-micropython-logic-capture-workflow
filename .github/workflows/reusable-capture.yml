@@ -55,5 +55,5 @@ jobs:
             exit 1
 
           else
-            aws stepfunctions describe-execution --execution-arn $EXECUTION_ARN --output text --query 'state'
+            aws stepfunctions describe-execution --execution-arn $EXECUTION_ARN --output text --query 'output'
           fi
