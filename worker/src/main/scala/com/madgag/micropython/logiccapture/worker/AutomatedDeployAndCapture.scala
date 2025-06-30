@@ -1,19 +1,12 @@
 package com.madgag.micropython.logiccapture.worker
 
+import cats.*
 import cats.effect.{IO, Resource}
+import cats.syntax.all.*
 import com.madgag.micropython.logiccapture.worker.AutomatedDeployAndCapture.Error.{InvalidYaml, MissingConfig}
 import com.madgag.micropython.logiccapture.worker.aws.Fail
 import org.virtuslab.yaml.*
 import os.*
-import cats.*
-import cats.data.*
-import cats.syntax.all.*
-import cats.effect.IO
-import com.madgag.micropython.logiccapture.worker.aws.StepFuncClient.{GetTaskResponse, State}
-import software.amazon.awssdk.regions.Region
-import software.amazon.awssdk.services.sfn.SfnAsyncClient
-import software.amazon.awssdk.services.sfn.model.*
-import ujson.Value
 import upickle.default.*
 
 import scala.util.Try
