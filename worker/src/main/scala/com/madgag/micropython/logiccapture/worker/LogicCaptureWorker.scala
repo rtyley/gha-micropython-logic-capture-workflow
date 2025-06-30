@@ -25,7 +25,7 @@ class LogicCaptureWorker extends ActivityWorker[JobDef, CaptureResult] {
     IO {
       println(s"going to try a clone... to $repoContainerDir")
       val repository = Git.cloneRepository()
-        .setCredentialsProvider(new UsernamePasswordCredentialsProvider(jobDef.githubToken, ""))
+        .setCredentialsProvider(new UsernamePasswordCredentialsProvider("x-access-token", jobDef.githubToken))
         .setTransportConfigCallback(bearerAuth(jobDef.githubToken))
         .setDirectory(repoContainerDir.toIO).setURI(jobDef.repoHttpsGitUrl).call().getRepository.asInstanceOf[FileRepository]
 
