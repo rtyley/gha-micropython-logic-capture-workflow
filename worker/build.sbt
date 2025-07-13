@@ -8,9 +8,10 @@ libraryDependencies ++= Seq(
   "software.amazon.awssdk" % "sfn" % awsSdkVersion,
   "com.lihaoyi" %% "upickle" % "4.2.1",
   "org.virtuslab" %% "scala-yaml" % "0.3.0",
-  "org.typelevel" %% "cats-effect" % "3.6.1",
+  "org.typelevel" %% "cats-effect" % "3.6.2",
   "org.eclipse.jgit" % "org.eclipse.jgit" % "7.2.1.202505142326-r",
-  "com.lihaoyi" %% "os-lib" % "0.11.4"
+  "com.lihaoyi" %% "os-lib" % "0.11.4",
+  "org.scalatest" %% "scalatest" % "3.2.19" % Test
 )
 
 name := "pico-logic-capture-worker"

@@ -11,7 +11,7 @@ import upickle.default.*
 
 import scala.util.Try
 
-case class CaptureResult(captureProcessOutput: String, capturedData: Option[String]) derives ReadWriter
+case class CaptureResult(captureProcessOutput: String, capturedData: Option[StoreCompressed]) derives ReadWriter
 
 object AutomatedDeployAndCapture {
 
@@ -39,7 +39,7 @@ object AutomatedDeployAndCapture {
       val configDir = os.Path((workRoot / captureConfigFileSubPath).toNIO.getParent)
 
       execute(workRoot, resultsDir, configDir, config)
-        .flatTap(result => IO(println(s"Captured stuff was: ${result.capturedData.map(_.take(40))}")))
+        .flatTap(result => IO(println(s"Captured stuff was: ${result.capturedData.map(_.uncompressed.take(40))}")))
     }.sequence
   }
 
@@ -59,7 +59,7 @@ object AutomatedDeployAndCapture {
       mpremoteProcess <- Resource.fromAutoCloseable(IO(connectMPRemote(workRoot, mountFolder, cap)))
       captureProcess <- Resource.fromAutoCloseable(IO(os.proc("TerminalCapture", "capture", "/dev/ttyACM0", workRoot / captureDef, captureResultsFile).spawn()))
     } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
-      IO.blocking(captureProcess.waitFor(10000)) >> IO(CaptureResult(captureProcess.stdout.trim(), Try(os.read(captureResultsFile)).toOption))
+      IO.blocking(captureProcess.waitFor(10000)) >> IO(CaptureResult(captureProcess.stdout.trim(), Try(os.read(captureResultsFile)).toOption.map(StoreCompressed(_))))
     }
   }
 

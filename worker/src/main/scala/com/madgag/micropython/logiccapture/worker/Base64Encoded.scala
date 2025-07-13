@@ -1,9 +1,13 @@
 package com.madgag.micropython.logiccapture.worker
 
+import com.madgag.micropython.logiccapture.worker.StoreCompressed.compress
 import upickle.default.*
 
-import java.util.Base64
+import java.io.ByteArrayOutputStream
+import java.nio.charset.StandardCharsets
 import java.nio.charset.StandardCharsets.UTF_8
+import java.util.Base64
+import java.util.zip.{DataFormatException, Deflater, Inflater}
 
 case class Base64Encoded[T: ReadWriter](value: T) {
   val asBase64: String = Base64.getEncoder.encodeToString(write(value).getBytes(UTF_8))
