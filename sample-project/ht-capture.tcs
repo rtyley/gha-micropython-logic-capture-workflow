@@ -8,8 +8,7 @@
   "CaptureChannels": [
     {
       "ChannelNumber": 0,
-      "ChannelName": "Output",
-      "Hidden": false
+      "ChannelName": "Output"
     }
   ],
   "Bursts": [],
