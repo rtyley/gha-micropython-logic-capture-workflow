@@ -32,5 +32,6 @@ jobs:
     permissions: { id-token: write, contents: read }
     with:
       LOGIC_CAPTURE_FILE: "sample-project/logic-capture.yml"
+      ARTIFACT_NAME: 'demo-capture'
     secrets:
       AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
