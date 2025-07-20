@@ -4,7 +4,7 @@ import cats.*
 import cats.effect.{IO, Resource}
 import cats.syntax.all.*
 import com.github.tototoshi.csv.{CSVReader, CSVWriter}
-import com.madgag.logic.ChannelMapping
+import com.madgag.logic.{ChannelMapping, TimeParser}
 import com.madgag.logic.fileformat.Foo
 import com.madgag.logic.fileformat.gusmanb.{GusmanBCaptureCSV, GusmanBConfig}
 import com.madgag.logic.fileformat.saleae.csv.SaleaeCsv
@@ -19,7 +19,7 @@ import java.time.Duration
 import scala.io.Source
 import scala.util.Try
 
-case class CaptureResult(captureProcessOutput: String, capturedData: Option[StoreCompressed]) derives ReadWriter
+case class CaptureResult(captureProcessOutput: String, capturedData: Option[String]) derives ReadWriter
 
 object AutomatedDeployAndCapture {
 
@@ -47,7 +47,7 @@ object AutomatedDeployAndCapture {
       val configDir = os.Path((workRoot / captureConfigFileSubPath).toNIO.getParent)
 
       execute(workRoot, resultsDir, configDir, config)
-        .flatTap(result => IO(println(s"Captured stuff was: ${result.capturedData.map(_.uncompressed.take(40))}")))
+        .flatTap(result => IO(println(s"Captured stuff was: ${result.capturedData.map(_.take(40))}")))
     }.sequence
   }
 
@@ -81,10 +81,10 @@ object AutomatedDeployAndCapture {
           val signals = Foo.read(csvDetails.format)(CSVReader.open(Source.fromString(gusmanbCaptureResults)))
           println(signals)
           val writer = new StringWriter()
-          Foo.write(signals, csvDetails)(CSVWriter.open(writer)(SaleaeCsv.CsvFormat))
+          Foo.write(signals, SaleaeCsv.csvDetails(TimeParser.DeltaParser, channelMapping))(CSVWriter.open(writer)(SaleaeCsv.CsvFormat))
           writer.toString
         }
-        CaptureResult(captureProcess.stdout.trim(), saleaeFormattedCsvExport.map(StoreCompressed(_)))
+        CaptureResult(captureProcess.stdout.trim(), saleaeFormattedCsvExport)
       }
     }
   }
