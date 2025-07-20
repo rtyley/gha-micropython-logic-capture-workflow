@@ -3,13 +3,20 @@ package com.madgag.micropython.logiccapture.worker
 import cats.*
 import cats.effect.{IO, Resource}
 import cats.syntax.all.*
-import com.madgag.logic.fileformat.gusmanb.GusmanBConfig
+import com.github.tototoshi.csv.{CSVReader, CSVWriter}
+import com.madgag.logic.ChannelMapping
+import com.madgag.logic.fileformat.Foo
+import com.madgag.logic.fileformat.gusmanb.{GusmanBCaptureCSV, GusmanBConfig}
+import com.madgag.logic.fileformat.saleae.csv.SaleaeCsv
 import com.madgag.micropython.logiccapture.worker.AutomatedDeployAndCapture.Error.{InvalidYaml, MissingConfig}
 import com.madgag.micropython.logiccapture.worker.aws.Fail
 import org.virtuslab.yaml.*
 import os.*
 import upickle.default.*
 
+import java.io.StringWriter
+import java.time.Duration
+import scala.io.Source
 import scala.util.Try
 
 case class CaptureResult(captureProcessOutput: String, capturedData: Option[StoreCompressed]) derives ReadWriter
@@ -64,7 +71,21 @@ object AutomatedDeployAndCapture {
       mpremoteProcess <- Resource.fromAutoCloseable(IO(connectMPRemote(workRoot, mountFolder, cap)))
       captureProcess <- Resource.fromAutoCloseable(IO(os.proc("TerminalCapture", "capture", "/dev/ttyACM0", gusmanbConfigFile, captureResultsFile).spawn()))
     } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
-      IO.blocking(captureProcess.waitFor(10000)) >> IO(CaptureResult(captureProcess.stdout.trim(), Try(os.read(captureResultsFile)).toOption.map(StoreCompressed(_))))
+      IO.blocking(captureProcess.waitFor(10000)) >> IO {
+        val saleaeFormattedCsvExport: Option[String] = for {
+          gusmanbCaptureResults <- Try(os.read(captureResultsFile)).toOption
+        } yield {
+          val channelMapping = ChannelMapping[Int](gusmanbConfig.captureChannels.map(cc => cc.channelName -> cc.channelNumber) *)
+          val csvDetails = GusmanBCaptureCSV.csvDetails(gusmanbConfig.sampleIntervalDuration, channelMapping)
+
+          val signals = Foo.read(csvDetails.format)(CSVReader.open(Source.fromString(gusmanbCaptureResults)))
+          println(signals)
+          val writer = new StringWriter()
+          Foo.write(signals, csvDetails)(CSVWriter.open(writer)(SaleaeCsv.CsvFormat))
+          writer.toString
+        }
+        CaptureResult(captureProcess.stdout.trim(), saleaeFormattedCsvExport.map(StoreCompressed(_)))
+      }
     }
   }
 
