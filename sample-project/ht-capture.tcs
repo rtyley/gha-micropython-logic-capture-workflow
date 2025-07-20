@@ -1,5 +1,5 @@
 {
-  "Frequency": 10000,
+  "Frequency": 3200,
   "PreTriggerSamples": 512,
   "PostTriggerSamples": 6000,
   "TotalSamples": 65512,
