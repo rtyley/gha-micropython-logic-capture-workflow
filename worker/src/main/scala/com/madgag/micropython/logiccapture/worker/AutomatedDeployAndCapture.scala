@@ -3,6 +3,7 @@ package com.madgag.micropython.logiccapture.worker
 import cats.*
 import cats.effect.{IO, Resource}
 import cats.syntax.all.*
+import com.madgag.logic.fileformat.gusmanb.GusmanBConfig
 import com.madgag.micropython.logiccapture.worker.AutomatedDeployAndCapture.Error.{InvalidYaml, MissingConfig}
 import com.madgag.micropython.logiccapture.worker.aws.Fail
 import org.virtuslab.yaml.*
@@ -54,10 +55,14 @@ object AutomatedDeployAndCapture {
     os.makeDir.all(resultsDir)
     val captureResultsFile: Path = resultsDir / "capture.csv"
     println(s"captureResultsFile=$captureResultsFile")
+    val gusmanbConfigFile = workRoot / captureDef
+
+    val gusmanbConfig = GusmanBConfig.read(os.read(gusmanbConfigFile))
+    println(s"sampleIntervalDuration=${gusmanbConfig.sampleIntervalDuration}")
 
     (for {
       mpremoteProcess <- Resource.fromAutoCloseable(IO(connectMPRemote(workRoot, mountFolder, cap)))
-      captureProcess <- Resource.fromAutoCloseable(IO(os.proc("TerminalCapture", "capture", "/dev/ttyACM0", workRoot / captureDef, captureResultsFile).spawn()))
+      captureProcess <- Resource.fromAutoCloseable(IO(os.proc("TerminalCapture", "capture", "/dev/ttyACM0", gusmanbConfigFile, captureResultsFile).spawn()))
     } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
       IO.blocking(captureProcess.waitFor(10000)) >> IO(CaptureResult(captureProcess.stdout.trim(), Try(os.read(captureResultsFile)).toOption.map(StoreCompressed(_))))
     }

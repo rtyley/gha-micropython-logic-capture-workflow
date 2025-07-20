@@ -11,6 +11,7 @@ libraryDependencies ++= Seq(
   "org.typelevel" %% "cats-effect" % "3.6.2",
   "org.eclipse.jgit" % "org.eclipse.jgit" % "7.2.1.202505142326-r",
   "com.lihaoyi" %% "os-lib" % "0.11.4",
+  "com.gu" %% "logic-signals" % "1.0.1",
   "org.scalatest" %% "scalatest" % "3.2.19" % Test
 )
 
