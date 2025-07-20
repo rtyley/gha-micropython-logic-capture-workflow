@@ -19,9 +19,14 @@ def blink():
     nop()          [31]
     wrap()
 
-sm = rp2.StateMachine(0, blink, freq=2289, set_base=Pin(2))
+instructions_per_full_cycle = 32 * 10
+desired_blink_frequency_hz = 10
+clock_freq_hz = desired_blink_frequency_hz * instructions_per_full_cycle
 
-# Run the state machine for 3 seconds.  The LED should blink.
+print(f"clock_freq_hz=${clock_freq_hz}")
+
+sm = rp2.StateMachine(0, blink, freq=clock_freq_hz, set_base=Pin(2))
+
 sm.active(1)
-time.sleep(3)
+time.sleep(8)
 sm.active(0)
