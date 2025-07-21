@@ -22,11 +22,13 @@ def blink():
 instructions_per_full_cycle = 32 * 10
 desired_blink_frequency_hz = 10
 clock_freq_hz = desired_blink_frequency_hz * instructions_per_full_cycle
-
 print(f"clock_freq_hz=${clock_freq_hz}")
 
-sm = rp2.StateMachine(0, blink, freq=clock_freq_hz, set_base=Pin(2))
+all_available_gpio_pins = list(range(2, 22+1)) + list(range(26, 28+1))
 
-sm.active(1)
-time.sleep(8)
-sm.active(0)
+for pin in all_available_gpio_pins:
+  sm = rp2.StateMachine(0, blink, freq=clock_freq_hz, set_base=Pin(pin))
+
+  sm.active(1)
+  time.sleep(0.2)
+  sm.active(0)
