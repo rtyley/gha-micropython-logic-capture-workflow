@@ -8,8 +8,99 @@
   "CaptureChannels": [
     {
       "ChannelNumber": 0,
-      "ChannelName": "Output",
-      "Hidden": false
+      "ChannelName": "cn0"
+    },
+    {
+      "ChannelNumber": 1,
+      "ChannelName": "cn1"
+    },
+    {
+      "ChannelNumber": 2,
+      "ChannelName": "cn2"
+    },
+    {
+      "ChannelNumber": 3,
+      "ChannelName": "cn3"
+    },
+    {
+      "ChannelNumber": 4,
+      "ChannelName": "cn4"
+    },
+    {
+      "ChannelNumber": 5,
+      "ChannelName": "cn5"
+    },
+    {
+      "ChannelNumber": 6,
+      "ChannelName": "cn6"
+    },
+    {
+      "ChannelNumber": 7,
+      "ChannelName": "cn7"
+    },
+        {
+      "ChannelNumber": 8,
+      "ChannelName": "cn8"
+    },
+    {
+      "ChannelNumber": 9,
+      "ChannelName": "cn9"
+    },
+    {
+      "ChannelNumber": 10,
+      "ChannelName": "cn10"
+    },
+    {
+      "ChannelNumber": 11,
+      "ChannelName": "cn11"
+    },
+    {
+      "ChannelNumber": 12,
+      "ChannelName": "cn12"
+    },
+    {
+      "ChannelNumber": 13,
+      "ChannelName": "cn13"
+    },
+    {
+      "ChannelNumber": 14,
+      "ChannelName": "cn14"
+    },
+    {
+      "ChannelNumber": 15,
+      "ChannelName": "cn15"
+    },
+    {
+      "ChannelNumber": 16,
+      "ChannelName": "cn16"
+    },
+    {
+      "ChannelNumber": 17,
+      "ChannelName": "cn17"
+    },
+    {
+      "ChannelNumber": 18,
+      "ChannelName": "cn18"
+    },
+    {
+      "ChannelNumber": 19,
+      "ChannelName": "cn19"
+    },
+    {
+      "ChannelNumber": 20,
+      "ChannelName": "cn20"
+    },
+    {
+      "ChannelNumber": 21,
+      "ChannelName": "cn21"
+    },
+    {
+      "ChannelNumber": 22,
+      "ChannelName": "cn22"
+    },
+    {
+      "ChannelNumber": 23,
+      "ChannelName": "cn23"
     }
   ],
   "Bursts": [],
