@@ -20,7 +20,7 @@ def blink():
     wrap()
 
 instructions_per_full_cycle = 32 * 10
-desired_blink_frequency_hz = 10
+desired_blink_frequency_hz = 50
 clock_freq_hz = desired_blink_frequency_hz * instructions_per_full_cycle
 print(f"clock_freq_hz=${clock_freq_hz}")
 
@@ -30,5 +30,5 @@ for pin in all_available_gpio_pins:
   sm = rp2.StateMachine(0, blink, freq=clock_freq_hz, set_base=Pin(pin))
 
   sm.active(1)
-  time.sleep(0.2)
+  time.sleep(0.06)
   sm.active(0)
