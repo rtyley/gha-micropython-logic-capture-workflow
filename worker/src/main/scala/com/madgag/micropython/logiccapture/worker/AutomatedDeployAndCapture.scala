@@ -69,24 +69,32 @@ object AutomatedDeployAndCapture {
 
     (for {
       mpremoteProcess <- Resource.fromAutoCloseable(IO(connectMPRemote(workRoot, mountFolder, cap)))
-      captureProcess <- Resource.fromAutoCloseable(IO(os.proc("TerminalCapture", "capture", "/dev/ttyACM0", gusmanbConfigFile, captureResultsFile).spawn()))
+      captureProcess <- Resource.fromAutoCloseable(IO(connectCapture(gusmanbConfigFile, captureResultsFile)))
     } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
-      IO.blocking(captureProcess.waitFor(10000)) >> IO {
-        val saleaeFormattedCsvExport: Option[String] = for {
-          gusmanbCaptureResults <- Try(os.read(captureResultsFile)).toOption
-        } yield {
-          val channelMapping = ChannelMapping[Int](gusmanbConfig.captureChannels.map(cc => cc.channelName -> cc.channelNumber) *)
-          val csvDetails = GusmanBCaptureCSV.csvDetails(gusmanbConfig.sampleIntervalDuration, channelMapping)
-
-          val signals = Foo.read(csvDetails.format)(CSVReader.open(Source.fromString(gusmanbCaptureResults)))
-          println(signals)
-          val writer = new StringWriter()
-          Foo.write(signals, SaleaeCsv.csvDetails(TimeParser.DeltaParser, channelMapping))(CSVWriter.open(writer)(SaleaeCsv.CsvFormat))
-          writer.toString
-        }
-        CaptureResult(captureProcess.stdout.trim(), saleaeFormattedCsvExport)
+      IO.blocking(captureProcess.join(10000)) >> IO {
+        CaptureResult(captureProcess.stdout.trim(), compactCapture(captureResultsFile, gusmanbConfig))
       }
     }
+  }
+
+  private def connectCapture(gusmanbConfigFile: Path, captureResultsFile: Path) = {
+    os.proc("TerminalCapture", "capture", "/dev/ttyACM0", gusmanbConfigFile, captureResultsFile).spawn()
+  }
+
+  private def compactCapture(captureResultsFile: Path, gusmanbConfig: GusmanBConfig) = {
+    val saleaeFormattedCsvExport: Option[String] = for {
+      gusmanbCaptureResults <- Try(os.read(captureResultsFile)).toOption
+    } yield {
+      val channelMapping = ChannelMapping[Int](gusmanbConfig.captureChannels.map(cc => cc.channelName -> cc.channelNumber) *)
+      val csvDetails = GusmanBCaptureCSV.csvDetails(gusmanbConfig.sampleIntervalDuration, channelMapping)
+
+      val signals = Foo.read(csvDetails.format)(CSVReader.open(Source.fromString(gusmanbCaptureResults)))
+      println(signals)
+      val writer = new StringWriter()
+      Foo.write(signals, SaleaeCsv.csvDetails(TimeParser.DeltaParser, channelMapping))(CSVWriter.open(writer)(SaleaeCsv.CsvFormat))
+      writer.toString
+    }
+    saleaeFormattedCsvExport
   }
 
   private def connectMPRemote(workRoot: Path, mountFolder: SubPath, cap: CaptureConfig) = {
