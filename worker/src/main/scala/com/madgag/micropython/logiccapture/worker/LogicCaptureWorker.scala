@@ -11,9 +11,9 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import os.{Path, SubPath}
 import upickle.default.*
 
-class LogicCaptureWorker extends ActivityWorker[JobDef, CaptureResult] {
+class LogicCaptureWorker extends ActivityWorker[JobDef, Map[String, CaptureResult]] {
 
-  override def process(jobDef: JobDef)(using heartbeat: Heartbeat): IO[Either[Fail, CaptureResult]] = {
+  override def process(jobDef: JobDef)(using heartbeat: Heartbeat): IO[Either[Fail, Map[String, CaptureResult]]] = {
     val tempDir: Path = os.temp.dir()
     for {
       repoDir <- cloneRepo(jobDef, tempDir / "repo")

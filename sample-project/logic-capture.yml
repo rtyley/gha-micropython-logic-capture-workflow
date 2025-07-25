@@ -1,4 +1,9 @@
 mountFolder: "device-fs"
-startImport: "pio_blink"
 
 captureDef: "ht-capture.tcs"
+
+captures:
+  big-boy:
+    exec: "import pio_blink"
+  funk:
+    exec: "import pio_pwm"
