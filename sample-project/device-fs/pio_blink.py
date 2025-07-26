@@ -4,18 +4,19 @@ from machine import Pin
 
 # Define the blink program.  It has one GPIO to bind to on the set instruction, which is an output pin.
 # Use lots of delays to make the blinking visible by eye.
-@rp2.asm_pio(out_init=[PIO.OUT_LOW] * 29, autopull=True, fifo_join=PIO.JOIN_TX)
+@rp2.asm_pio(set_init=rp2.PIO.OUT_LOW)
 def blink():
     wrap_target()
-    pull()
-    mov()
-
-    out(pins, 32)  [31]
+    set(pins, 1)   [31]
     nop()          [31]
     nop()          [31]
     nop()          [31]
     nop()          [31]
-    
+    set(pins, 0)   [31]
+    nop()          [31]
+    nop()          [31]
+    nop()          [31]
+    nop()          [31]
     wrap()
 
 instructions_per_full_cycle = 32 * 10
