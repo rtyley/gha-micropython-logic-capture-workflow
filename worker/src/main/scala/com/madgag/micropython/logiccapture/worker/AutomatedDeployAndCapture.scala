@@ -71,7 +71,7 @@ object AutomatedDeployAndCapture {
       mpremoteProcess <- Resource.fromAutoCloseable(IO(connectMPRemote(workRoot, mountFolder, cap)))
       captureProcess <- Resource.fromAutoCloseable(IO(connectCapture(gusmanbConfigFile, captureResultsFile)))
     } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
-      IO.blocking(captureProcess.join(10000)) >> IO {
+      IO.blocking(captureProcess.waitFor(10000)) >> IO {
         CaptureResult(captureProcess.stdout.trim(), compactCapture(captureResultsFile, gusmanbConfig))
       }
     }
