@@ -1,6 +1,7 @@
 package com.madgag.micropython.logiccapture.worker
 
 import cats.effect.IO
+import com.madgag.micropython.logiccapture.model.CaptureResult
 import com.madgag.micropython.logiccapture.worker.LogicCaptureWorker.JobDef
 import com.madgag.micropython.logiccapture.worker.aws.{ActivityWorker, Fail, Heartbeat}
 import com.madgag.micropython.logiccapture.worker.git.BearerAuthTransportConfig

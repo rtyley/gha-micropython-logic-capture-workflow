@@ -8,6 +8,7 @@ import com.madgag.logic.{ChannelMapping, TimeParser}
 import com.madgag.logic.fileformat.Foo
 import com.madgag.logic.fileformat.gusmanb.{GusmanBCaptureCSV, GusmanBConfig}
 import com.madgag.logic.fileformat.saleae.csv.SaleaeCsv
+import com.madgag.micropython.logiccapture.model.CaptureResult
 import com.madgag.micropython.logiccapture.worker.AutomatedDeployAndCapture.Error.{InvalidYaml, MissingConfig}
 import com.madgag.micropython.logiccapture.worker.aws.Fail
 import org.virtuslab.yaml.*
@@ -19,7 +20,7 @@ import java.time.Duration
 import scala.io.Source
 import scala.util.Try
 
-case class CaptureResult(captureProcessOutput: String, capturedData: Option[String]) derives ReadWriter
+
 
 object AutomatedDeployAndCapture {
 
