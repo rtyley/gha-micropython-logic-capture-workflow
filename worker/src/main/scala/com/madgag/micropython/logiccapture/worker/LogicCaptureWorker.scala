@@ -1,8 +1,7 @@
 package com.madgag.micropython.logiccapture.worker
 
 import cats.effect.IO
-import com.madgag.micropython.logiccapture.model.CaptureResult
-import com.madgag.micropython.logiccapture.worker.LogicCaptureWorker.JobDef
+import com.madgag.micropython.logiccapture.model.{CaptureResult, GitSource, JobDef}
 import com.madgag.micropython.logiccapture.worker.aws.{ActivityWorker, Fail, Heartbeat}
 import com.madgag.micropython.logiccapture.worker.git.BearerAuthTransportConfig
 import com.madgag.micropython.logiccapture.worker.git.BearerAuthTransportConfig.bearerAuth
@@ -17,32 +16,20 @@ class LogicCaptureWorker extends ActivityWorker[JobDef, CaptureResult] {
   override def process(jobDef: JobDef)(using heartbeat: Heartbeat): IO[Either[Fail, CaptureResult]] = {
     val tempDir: Path = os.temp.dir()
     for {
-      repoDir <- cloneRepo(jobDef, tempDir / "repo")
-      res <- AutomatedDeployAndCapture.process(repoDir, jobDef.captureConfigFile.value, tempDir / "results").map(_.left.map(_.asFail))
-    } yield res
+      sourceDir <- cloneRepo(jobDef.sourceDef, tempDir / "repo")
+      res <- AutomatedDeployAndCapture.process(sourceDir, jobDef.executeAndCapture)
+    } yield Right(res)
   }
 
-  def cloneRepo(jobDef: JobDef, repoContainerDir: Path)(using heartbeat: Heartbeat): IO[Path] = {
-    IO {
-      println(s"going to try a clone... to $repoContainerDir")
-      val repository = Git.cloneRepository()
-        .setCredentialsProvider(new UsernamePasswordCredentialsProvider("x-access-token", jobDef.githubToken))
-        .setTransportConfigCallback(bearerAuth(jobDef.githubToken))
-        .setDirectory(repoContainerDir.toIO).setURI(jobDef.repoHttpsGitUrl).call().getRepository.asInstanceOf[FileRepository]
+  def cloneRepo(gitSource: GitSource, repoContainerDir: Path)(using heartbeat: Heartbeat): IO[Path] = IO {
+    println(s"going to try a clone... to $repoContainerDir")
+    val repository = Git.cloneRepository()
+      .setCredentialsProvider(new UsernamePasswordCredentialsProvider("x-access-token", gitSource.githubToken))
+      .setTransportConfigCallback(bearerAuth(gitSource.githubToken))
+      .setDirectory(repoContainerDir.toIO).setURI(gitSource.gitSpec.httpsGitUrl).call().getRepository.asInstanceOf[FileRepository]
 
-      println(s"Clone is done, right? $repository")
-      os.Path(repository.getWorkTree)
+    println(s"Clone is done, right? $repository")
+    os.Path(repository.getWorkTree)
 
-    }.flatTap(_ => heartbeat.send())
-  }
-}
-
-object LogicCaptureWorker {
-  case class JobDef(githubToken: String, repoGitUrl: String, captureConfigFile: Base64Encoded[SubPath]) derives ReadWriter {
-    val repoHttpsGitUrl: String = "https" + repoGitUrl.stripPrefix("git")
-  }
-
-  object JobDef {
-    given subPathRW: ReadWriter[SubPath] = readwriter[String].bimap[SubPath](_.toString, SubPath(_))
-  }
+  }.flatTap(_ => heartbeat.send())
 }

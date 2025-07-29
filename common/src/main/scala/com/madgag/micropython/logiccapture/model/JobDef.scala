@@ -28,6 +28,8 @@ case class CaptureDef(
 
 case class GitSource(githubToken: String, gitSpec: GitSpec) derives ReadWriter
 
-case class DeployDef(gitSource: GitSource, subFolder: SubPath) derives ReadWriter
+case class ExecutionDef(mountFolder: SubPath, exec: String) derives ReadWriter
 
-case class JobDef(deployDef: DeployDef, captureDef: CaptureDef) derives ReadWriter
+case class ExecuteAndCaptureDef(execution: ExecutionDef, capture: CaptureDef) derives ReadWriter
+
+case class JobDef(sourceDef: GitSource, executeAndCapture: ExecuteAndCaptureDef) derives ReadWriter

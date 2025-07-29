@@ -33,7 +33,7 @@ class RemoteCaptureClient(
 
   def capture[C](exec: String)(jobDef: JobDef, channelMapping: ChannelMapping[C]): IO[ChannelSignals[Delta ,C]] = for {
     startExecutionResponse <- startExecutionOf(jobDef)
-    conclusion <- findConclusionOfExecution(startExecutionResponse.executionArn, jobDef.captureDef.sampling.postTriggerDuration)
+    conclusion <- findConclusionOfExecution(startExecutionResponse.executionArn, jobDef.executeAndCapture.capture.sampling.postTriggerDuration)
   } yield {
     (for {
       conc <- conclusion.toOption

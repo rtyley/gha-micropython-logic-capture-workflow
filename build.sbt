@@ -9,9 +9,8 @@ lazy val common = (project in file("common")).settings(
     "org.eclipse.jgit" % "org.eclipse.jgit" % "7.3.0.202506031305-r",
     "software.amazon.awssdk" % "sfn" % awsSdkVersion,
     "com.lihaoyi" %% "upickle" % "4.2.1",
-    "org.virtuslab" %% "scala-yaml" % "0.3.0",
     "org.typelevel" %% "cats-effect" % "3.6.3",
-    "com.gu" %% "logic-signals" % "1.0.3",
+    "com.gu" %% "logic-signals" % "2.1.1",
     "org.scalatest" %% "scalatest" % "3.2.19" % Test
   )
 )

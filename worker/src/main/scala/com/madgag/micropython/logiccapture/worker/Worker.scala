@@ -2,7 +2,6 @@ package com.madgag.micropython.logiccapture.worker
 
 import cats.*
 import cats.effect.{IO, IOApp}
-import com.madgag.micropython.logiccapture.worker.LogicCaptureWorker.JobDef
 import com.madgag.micropython.logiccapture.worker.aws.StepFuncClient.GetTaskResponse
 import com.madgag.micropython.logiccapture.worker.aws.{AWS, StepFuncActivityClient, TaskLease}
 import upickle.default.*
