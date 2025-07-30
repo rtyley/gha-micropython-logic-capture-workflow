@@ -1,5 +1,6 @@
 package com.madgag.micropython.logiccapture.model
 
+import com.madgag.logic.GpioPin
 import org.eclipse.jgit.lib.ObjectId
 import os.SubPath
 import scodec.bits.BitVector
@@ -8,6 +9,8 @@ import upickle.default.*
 given ReadWriter[SubPath] = readwriter[String].bimap[SubPath](_.toString, SubPath(_))
 given ReadWriter[ObjectId] = readwriter[String].bimap[ObjectId](_.toString, ObjectId.fromString)
 given ReadWriter[BitVector] = readwriter[String].bimap[BitVector](_.toBin, BitVector.fromValidBin(_))
+given ReadWriter[GpioPin] = readwriter[Int].bimap[GpioPin](_.number, GpioPin(_))
+
 
 case class GitSpec(gitUrl: String, commitId: ObjectId, subFolder: SubPath) derives ReadWriter {
   val httpsGitUrl: String = "https" + gitUrl.stripPrefix("git")
@@ -16,13 +19,13 @@ case class GitSpec(gitUrl: String, commitId: ObjectId, subFolder: SubPath) deriv
 sealed trait Trigger derives ReadWriter
 
 object Trigger {
-  case class Pattern(bits: BitVector, baseGpioPin: Int) extends Trigger
-  case class Edge(gpioPin: Int, goingTo: Boolean) extends Trigger
+  case class Pattern(bits: BitVector, baseGpioPin: GpioPin) extends Trigger
+  case class Edge(gpioPin: GpioPin, goingTo: Boolean) extends Trigger
 }
 
 case class CaptureDef(
   sampling: Sampling,
-  gpioPins: Set[Int],
+  gpioPins: Set[GpioPin],
   trigger: Trigger
 ) derives ReadWriter
 

@@ -12,4 +12,5 @@ case class Sampling(
 ) derives ReadWriter {
   val sampleIntervalDuration: Duration = ofSeconds(1).dividedBy(frequency)
   val postTriggerDuration: Duration = sampleIntervalDuration.multipliedBy(postTriggerSamples)
+  val totalSamples: Int = preTriggerSamples + postTriggerSamples
 }

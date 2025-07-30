@@ -1,8 +1,10 @@
 ThisBuild / scalaVersion := "3.3.6"
 
-val awsSdkVersion = "2.32.8"
+val awsSdkVersion = "2.32.9"
 
 lazy val root = (project in file(".")).aggregate(common, worker, client)
+
+val scalaTest = "org.scalatest" %% "scalatest" % "3.2.19" % Test
 
 lazy val common = (project in file("common")).settings(
   libraryDependencies ++= Seq(
@@ -10,8 +12,8 @@ lazy val common = (project in file("common")).settings(
     "software.amazon.awssdk" % "sfn" % awsSdkVersion,
     "com.lihaoyi" %% "upickle" % "4.2.1",
     "org.typelevel" %% "cats-effect" % "3.6.3",
-    "com.gu" %% "logic-signals" % "2.1.1",
-    "org.scalatest" %% "scalatest" % "3.2.19" % Test
+    "com.gu" %% "logic-signals" % "2.2.0",
+    scalaTest
   )
 )
 
@@ -25,7 +27,8 @@ lazy val worker = (project in file("worker")).dependsOn(common).enablePlugins(Ja
     packageSummary := "Pico Logic Capture worker",
     packageDescription := "Description for Pico Logic Capture worker",
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "os-lib" % "0.11.4"
+      "com.lihaoyi" %% "os-lib" % "0.11.4",
+      scalaTest
     )
 
   // Debian / debianPackageDependencies ++= Seq("openjdk-17-jdk-headless")

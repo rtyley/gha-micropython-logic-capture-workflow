@@ -2,19 +2,17 @@ package com.madgag.micropython.logiccapture.worker
 
 import cats.*
 import cats.effect.{IO, Resource}
-import cats.syntax.all.*
 import com.github.tototoshi.csv.{CSVReader, CSVWriter}
 import com.madgag.logic.fileformat.Foo
 import com.madgag.logic.fileformat.gusmanb.{GusmanBCaptureCSV, GusmanBConfig}
 import com.madgag.logic.fileformat.saleae.csv.SaleaeCsv
 import com.madgag.logic.{ChannelMapping, TimeParser}
 import com.madgag.micropython.logiccapture.model.*
+import com.madgag.micropython.logiccapture.worker.GusmanBConfigSupport.*
 import com.madgag.micropython.logiccapture.worker.aws.Fail
 import os.*
-import upickle.default.*
 
 import java.io.StringWriter
-import java.time.Duration
 import scala.io.Source
 import scala.util.Try
 
@@ -25,25 +23,27 @@ object AutomatedDeployAndCapture {
     def asFail: Fail = Fail(this.getClass.getSimpleName, causeDescription)
   }
 
-  def process(sourceDir: Path, executeAndCaptureDef: ExecuteAndCaptureDef): IO[CaptureResult] = {
+  def process(sourceDir: Path, captureDir: Path, executeAndCaptureDef: ExecuteAndCaptureDef): IO[CaptureResult] = {
     println(s"path is ${sys.env("PATH")}")
     
-    def repoSubPath(target: RelPath): SubPath = (target resolveFrom configDir) subRelativeTo workRoot
+    val mountFolder = sourceDir /  executeAndCaptureDef.execution.mountFolder
 
-    val mountFolder: SubPath = repoSubPath(executionDef.mountFolder)
+    println(s"mountFolder: ${os.list(mountFolder).mkString("\n")}")
 
-    println(s"mountFolder: ${os.list(workRoot / mountFolder)}")
-
-    os.makeDir.all(resultsDir)
-    val captureResultsFile: Path = resultsDir / "capture.csv"
+    os.makeDir.all(captureDir)
+    val captureResultsFile: Path = captureDir / "capture.csv"
     println(s"captureResultsFile=$captureResultsFile")
-    val gusmanbConfigFile = workRoot / captureDef
+    
+    val gusmanbConfig: GusmanBConfig = executeAndCaptureDef.capture.toGusmanB
+    
+    val gusmanbConfigFile = captureDir / "captureDef.tcs"
 
-    val gusmanbConfig = GusmanBConfig.read(os.read(gusmanbConfigFile))
+    os.write(gusmanbConfigFile, GusmanBConfig.write(gusmanbConfig))
+
     println(s"sampleIntervalDuration=${gusmanbConfig.sampleIntervalDuration}")
 
     (for {
-      mpremoteProcess <- Resource.fromAutoCloseable(IO(connectMPRemote(workRoot, executeAndCaptureDef.execution)))
+      mpremoteProcess <- Resource.fromAutoCloseable(IO(connectMPRemote(mountFolder, executeAndCaptureDef.execution)))
       captureProcess <- Resource.fromAutoCloseable(IO(connectCapture(gusmanbConfigFile, captureResultsFile)))
     } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
       IO.blocking(captureProcess.waitFor(10000)) >> IO {
@@ -71,10 +71,10 @@ object AutomatedDeployAndCapture {
     saleaeFormattedCsvExport
   }
 
-  private def connectMPRemote(workRoot: Path, executionDef: ExecutionDef) = os.proc(
+  private def connectMPRemote(mountFolder: Path, executionDef: ExecutionDef) = os.proc(
     "mpremote",
     "connect", "id:560ca184b37d9ae2",
-    "mount", workRoot / executionDef.mountFolder,
+    "mount", mountFolder,
     "exec", executionDef.exec
   ).spawn(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
 }

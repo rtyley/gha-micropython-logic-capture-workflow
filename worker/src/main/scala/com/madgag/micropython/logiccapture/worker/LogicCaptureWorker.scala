@@ -17,7 +17,7 @@ class LogicCaptureWorker extends ActivityWorker[JobDef, CaptureResult] {
     val tempDir: Path = os.temp.dir()
     for {
       sourceDir <- cloneRepo(jobDef.sourceDef, tempDir / "repo")
-      res <- AutomatedDeployAndCapture.process(sourceDir, jobDef.executeAndCapture)
+      res <- AutomatedDeployAndCapture.process(sourceDir, tempDir  / "capture", jobDef.executeAndCapture)
     } yield Right(res)
   }
 
