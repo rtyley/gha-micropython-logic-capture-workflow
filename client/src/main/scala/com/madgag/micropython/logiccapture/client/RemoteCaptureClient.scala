@@ -31,7 +31,7 @@ class RemoteCaptureClient(
   stateMachineArn: String
 ) {
 
-  def capture[C](exec: String)(jobDef: JobDef, channelMapping: ChannelMapping[C]): IO[ChannelSignals[Delta ,C]] = for {
+  def capture[C](jobDef: JobDef, channelMapping: ChannelMapping[C]): IO[ChannelSignals[Delta ,C]] = for {
     startExecutionResponse <- startExecutionOf(jobDef)
     conclusion <- findConclusionOfExecution(startExecutionResponse.executionArn, jobDef.executeAndCapture.capture.sampling.postTriggerDuration)
   } yield {

@@ -6,7 +6,7 @@ import com.github.tototoshi.csv.{CSVReader, CSVWriter}
 import com.madgag.logic.fileformat.Foo
 import com.madgag.logic.fileformat.gusmanb.{GusmanBCaptureCSV, GusmanBConfig}
 import com.madgag.logic.fileformat.saleae.csv.SaleaeCsv
-import com.madgag.logic.{ChannelMapping, TimeParser}
+import com.madgag.logic.{ChannelMapping, GpioPin, TimeParser}
 import com.madgag.micropython.logiccapture.model.*
 import com.madgag.micropython.logiccapture.worker.GusmanBConfigSupport.*
 import com.madgag.micropython.logiccapture.worker.aws.Fail
@@ -59,7 +59,7 @@ object AutomatedDeployAndCapture {
     val saleaeFormattedCsvExport: Option[String] = for {
       gusmanbCaptureResults <- Try(os.read(captureResultsFile)).toOption
     } yield {
-      val channelMapping = ChannelMapping[Int](gusmanbConfig.captureChannels.map(cc => cc.channelName -> cc.channelNumber) *)
+      val channelMapping = ChannelMapping[GpioPin](gusmanbConfig.captureChannels.map(cc => cc.channelName -> cc.channelNumber.gpioPin) *)
       val csvDetails = GusmanBCaptureCSV.csvDetails(gusmanbConfig.sampleIntervalDuration, channelMapping)
 
       val signals = Foo.read(csvDetails.format)(CSVReader.open(Source.fromString(gusmanbCaptureResults)))

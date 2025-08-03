@@ -12,7 +12,7 @@ given ReadWriter[BitVector] = readwriter[String].bimap[BitVector](_.toBin, BitVe
 given ReadWriter[GpioPin] = readwriter[Int].bimap[GpioPin](_.number, GpioPin(_))
 
 
-case class GitSpec(gitUrl: String, commitId: ObjectId, subFolder: SubPath) derives ReadWriter {
+case class GitSpec(gitUrl: String, commitId: ObjectId) derives ReadWriter {
   val httpsGitUrl: String = "https" + gitUrl.stripPrefix("git")
 }
 

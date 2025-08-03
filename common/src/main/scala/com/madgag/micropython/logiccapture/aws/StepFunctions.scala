@@ -4,7 +4,6 @@ import cats.effect.IO
 import software.amazon.awssdk.awscore.{AwsClient, AwsRequest}
 
 import java.util.concurrent.CompletableFuture
-import java.util.function.Consumer
 
 class AWSIO[Client <: AwsClient, Req <: AwsRequest](client: Client) {
 
