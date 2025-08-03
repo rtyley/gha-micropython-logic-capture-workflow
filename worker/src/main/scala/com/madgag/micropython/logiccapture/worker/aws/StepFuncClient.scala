@@ -26,15 +26,18 @@ class StepFuncActivityClient(sfn: SfnAsyncClient, awsAccount: String, activityNa
     for {
       tokenText <- Option(resp.taskToken())
       input <- Option(resp.input())
-    } yield new GetTaskResponse(ujson.read(read[State](input).input), new TaskLease {
-      override val heartbeat: Heartbeat = () => awsIo.glurk(SendTaskHeartbeatRequest.builder().taskToken(tokenText).build())(_.sendTaskHeartbeat)
+    } yield {
+      println(s"I've got input=$input")
+      new GetTaskResponse(ujson.read(read[State](input).input), new TaskLease {
+        override val heartbeat: Heartbeat = () => awsIo.glurk(SendTaskHeartbeatRequest.builder().taskToken(tokenText).build())(_.sendTaskHeartbeat)
 
-      override def sendSuccess(output: Value): IO[SendTaskSuccessResponse] =
-        awsIo.glurk(SendTaskSuccessRequest.builder().taskToken(tokenText).output(ujson.write(output)).build())(_.sendTaskSuccess)
+        override def sendSuccess(output: Value): IO[SendTaskSuccessResponse] =
+          awsIo.glurk(SendTaskSuccessRequest.builder().taskToken(tokenText).output(ujson.write(output)).build())(_.sendTaskSuccess)
 
-      override def sendFail(fail: Fail): IO[SendTaskFailureResponse] =
-        awsIo.glurk(SendTaskFailureRequest.builder().taskToken(tokenText).cause(fail.cause).error(fail.error).build())(_.sendTaskFailure)
-    })
+        override def sendFail(fail: Fail): IO[SendTaskFailureResponse] =
+          awsIo.glurk(SendTaskFailureRequest.builder().taskToken(tokenText).cause(fail.cause).error(fail.error).build())(_.sendTaskFailure)
+      })
+    }
   }
 
 }
