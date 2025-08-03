@@ -30,7 +30,7 @@ lazy val sample = (project in file("sample-project")).dependsOn(client).settings
 
 lazy val worker = (project in file("worker")).dependsOn(common).enablePlugins(JavaServerAppPackaging, SystemdPlugin)
   .settings(
-    Debian / name := "pico-logic-capture-worker", // https://www.scala-sbt.org/sbt-native-packager/formats/debian.html#settings
+    name := "pico-logic-capture-worker", // https://www.scala-sbt.org/sbt-native-packager/formats/debian.html#settings
     maintainer := "Roberto Tyley <52038+rtyley@users.noreply.github.com>",
     packageSummary := "Pico Logic Capture worker",
     packageDescription := "Description for Pico Logic Capture worker",
