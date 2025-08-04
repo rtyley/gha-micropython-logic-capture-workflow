@@ -48,6 +48,7 @@ object AutomatedDeployAndCapture {
     } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
       println(s"Well, I got mpremoteProcess=$mpremoteProcess & captureProcess=$captureProcess")
       IO.blocking(captureProcess.waitFor(10000)) >> IO {
+        println("Finished waiting for captureProcess")
         CaptureResult(captureProcess.stdout.trim(), compactCapture(captureResultsFile, gusmanbConfig))
       }
     }
