@@ -18,7 +18,10 @@ class LogicCaptureWorker extends ActivityWorker[JobDef, CaptureResult] {
     for {
       sourceDir <- cloneRepo(jobDef.sourceDef, tempDir / "repo")
       res <- AutomatedDeployAndCapture.process(sourceDir, tempDir  / "capture", jobDef.executeAndCapture)
-    } yield Right(res)
+    } yield {
+      println(s"We got res=$res")
+      Right(res)
+    }
   }
 
   def cloneRepo(gitSource: GitSource, repoContainerDir: Path)(using heartbeat: Heartbeat): IO[Path] = IO {

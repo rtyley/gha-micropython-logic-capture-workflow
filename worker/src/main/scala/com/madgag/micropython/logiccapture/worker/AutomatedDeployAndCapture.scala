@@ -48,8 +48,12 @@ object AutomatedDeployAndCapture {
     } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
       println(s"Well, I got mpremoteProcess=$mpremoteProcess & captureProcess=$captureProcess")
       IO.blocking(captureProcess.waitFor(10000)) >> IO {
-        println("Finished waiting for captureProcess")
-        CaptureResult(captureProcess.stdout.trim(), compactCapture(captureResultsFile, gusmanbConfig))
+        println("Finished waiting for captureProcess, gonna give you some compact stuff")
+        val cc = compactCapture(captureResultsFile, gusmanbConfig)
+        println(s"cc=${cc.take(50)}")
+        val capProcOutput = captureProcess.stdout.trim()
+        println(s"capProcOutput=$capProcOutput")
+        CaptureResult(capProcOutput, cc)
       }
     }
   }
