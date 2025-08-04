@@ -13,6 +13,8 @@ given ReadWriter[GpioPin] = readwriter[Int].bimap[GpioPin](_.number, GpioPin(_))
 
 
 case class GitSpec(gitUrl: String, commitId: ObjectId) derives ReadWriter {
+  require(gitUrl.startsWith("git://") && gitUrl.endsWith(".git"))
+
   val httpsGitUrl: String = "https" + gitUrl.stripPrefix("git")
 }
 

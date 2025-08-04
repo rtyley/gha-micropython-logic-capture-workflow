@@ -20,6 +20,8 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Integrat
   private val awsAccountId: String = sys.env("AWS_ACCOUNT_ID")
   private val awsRegion: Region = sys.env.get("AWS_REGION").map(Region.of).getOrElse(EU_WEST_1)
 
+  private val token: String = sys.env("PICO_CAPTURE_GITHUB_TOKEN")
+
   val remoteCaptureClient = new RemoteCaptureClient(
     awsIo = new AWSIO[SfnAsyncClient, SfnRequest](SfnAsyncClient.create()),
     stateMachineArn = s"arn:aws:states:${awsRegion.id}:$awsAccountId:stateMachine:pico-logic-capture"
@@ -28,9 +30,9 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Integrat
   "TestFunk" should "check that the Pico does as it is supposed to" in {
     val jobDef = JobDef(
       GitSource(
-        "ghs_",
+        token,
         GitSpec(
-          "git@github.com:rtyley/gha-micropython-logic-capture-workflow.git",
+          "git://github.com/rtyley/gha-micropython-logic-capture-workflow.git",
           ObjectId.fromString("2bf20e9671410d9b08bd86daf02799ac4e1f669c")
         )
       ),
