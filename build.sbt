@@ -1,6 +1,6 @@
 ThisBuild / scalaVersion := "3.3.6"
 
-val awsSdkVersion = "2.32.9"
+val awsSdkVersion = "2.32.14"
 
 lazy val root = (project in file(".")).aggregate(common, worker, client)
 
@@ -12,7 +12,7 @@ lazy val common = (project in file("common")).settings(
     "software.amazon.awssdk" % "sfn" % awsSdkVersion,
     "com.lihaoyi" %% "upickle" % "4.2.1",
     "org.typelevel" %% "cats-effect" % "3.6.3",
-    "com.gu" %% "logic-signals" % "3.0.2",
+    "com.gu" %% "logic-signals" % "3.0.3",
     scalaTest
   )
 )
