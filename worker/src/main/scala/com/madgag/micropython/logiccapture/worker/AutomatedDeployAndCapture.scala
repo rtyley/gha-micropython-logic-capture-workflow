@@ -48,7 +48,7 @@ object AutomatedDeployAndCapture {
     } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
       println(s"Well, I got mpremoteProcess=$mpremoteProcess & captureProcess=$captureProcess")
       IO.blocking(captureProcess.waitFor(executeAndCaptureDef.capture.sampling.postTriggerDuration.multipliedBy(3).dividedBy(2).toMillis)) >> IO {
-        println("Finished waiting for captureProcess, gonna give you some compact stuff")
+        println(s"Finished waiting for captureProcess, cap exists=${captureResultsFile.toIO.exists()}")
         val cc = compactCapture(captureResultsFile, gusmanbConfig)
         println(s"cc=${cc.mkString.take(50)}")
         val capProcOutput = captureProcess.stdout.trim()
