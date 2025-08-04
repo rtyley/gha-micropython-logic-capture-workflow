@@ -7,7 +7,7 @@ import scodec.bits.BitVector
 import upickle.default.*
 
 given ReadWriter[SubPath] = readwriter[String].bimap[SubPath](_.toString, SubPath(_))
-given ReadWriter[ObjectId] = readwriter[String].bimap[ObjectId](_.toString, ObjectId.fromString)
+given ReadWriter[ObjectId] = readwriter[String].bimap[ObjectId](_.name, ObjectId.fromString)
 given ReadWriter[BitVector] = readwriter[String].bimap[BitVector](_.toBin, BitVector.fromValidBin(_))
 given ReadWriter[GpioPin] = readwriter[Int].bimap[GpioPin](_.number, GpioPin(_))
 

@@ -22,11 +22,12 @@ class LogicCaptureWorker extends ActivityWorker[JobDef, CaptureResult] {
   }
 
   def cloneRepo(gitSource: GitSource, repoContainerDir: Path)(using heartbeat: Heartbeat): IO[Path] = IO {
-    println(s"going to try a clone... to $repoContainerDir")
+    val httpsGitUrl = gitSource.gitSpec.httpsGitUrl
+    println(s"going to try to clone '$httpsGitUrl' to $repoContainerDir")
     val repository = Git.cloneRepository()
       .setCredentialsProvider(new UsernamePasswordCredentialsProvider("x-access-token", gitSource.githubToken))
       .setTransportConfigCallback(bearerAuth(gitSource.githubToken))
-      .setDirectory(repoContainerDir.toIO).setURI(gitSource.gitSpec.httpsGitUrl).call().getRepository.asInstanceOf[FileRepository]
+      .setDirectory(repoContainerDir.toIO).setURI(httpsGitUrl).call().getRepository.asInstanceOf[FileRepository]
 
     println(s"Clone is done, right? $repository")
     os.Path(repository.getWorkTree)
