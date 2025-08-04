@@ -45,7 +45,7 @@ class StepFuncActivityClient(sfn: SfnAsyncClient, awsAccount: String, activityNa
 object StepFuncClient {
   opaque type Token = String
 
-  case class State(input: String) derives ReadWriter
+  case class State(input: ujson.Value) derives ReadWriter
 
   object Token:
     def apply(t: String): Token = t
