@@ -47,10 +47,10 @@ object AutomatedDeployAndCapture {
       captureProcess <- Resource.fromAutoCloseable(IO(connectCapture(gusmanbConfigFile, captureResultsFile)))
     } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
       println(s"Well, I got mpremoteProcess=$mpremoteProcess & captureProcess=$captureProcess")
-      IO.blocking(captureProcess.waitFor(10000)) >> IO {
+      IO.blocking(captureProcess.waitFor(executeAndCaptureDef.capture.sampling.postTriggerDuration.multipliedBy(3).dividedBy(2).toMillis)) >> IO {
         println("Finished waiting for captureProcess, gonna give you some compact stuff")
         val cc = compactCapture(captureResultsFile, gusmanbConfig)
-        println(s"cc=${cc.take(50)}")
+        println(s"cc=${cc.mkString.take(50)}")
         val capProcOutput = captureProcess.stdout.trim()
         println(s"capProcOutput=$capProcOutput")
         CaptureResult(capProcOutput, cc)
