@@ -44,11 +44,16 @@ class RemoteCaptureClient(
     }).get
   }
 
-  private def findConclusionOfExecution(executionArn: String, minimumExecutionTime: Duration): IO[Either[Error, CaptureResult]] =
+  private def findConclusionOfExecution(executionArn: String, minimumExecutionTime: Duration): IO[Either[Error, CaptureResult]] = {
     Temporal[IO].sleep(minimumExecutionTime.toScala) >> retryingOnFailures(describeExecutionOf(executionArn))(
       limitRetriesByCumulativeDelay(30.seconds, fullJitter[IO](minimumExecutionTime.dividedBy(20).toScala)),
       retryUntilSuccessful(v => !UnfinishedExecutionStates.contains(v.status()), log = ResultHandler.noop)
     ).map(RemoteCaptureClient.Error.from)
+  }.timed.map {
+    case (timedDuration, result) =>
+      println(f"minimumExecutionTime=$minimumExecutionTime actual=${timedDuration.toJava} ${timedDuration.div(minimumExecutionTime.toScala)}%2.2f")
+      result
+  }
 
   private def startExecutionOf(jobDef: JobDef): IO[StartExecutionResponse] =
     awsIo.glurk(StartExecutionRequest.builder().stateMachineArn(stateMachineArn).input(write(jobDef)).build())(_.startExecution)

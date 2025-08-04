@@ -10,12 +10,18 @@ import org.eclipse.jgit.lib.ObjectId
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.time.{Millis, Seconds, Span}
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.regions.Region.EU_WEST_1
 import software.amazon.awssdk.services.sfn.SfnAsyncClient
 import software.amazon.awssdk.services.sfn.model.SfnRequest
 
-class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with IntegrationPatience {
+class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures {
+
+  implicit override val patienceConfig: PatienceConfig = PatienceConfig(
+    timeout = scaled(Span(40, Seconds)),
+    interval = scaled(Span(500, Millis))
+  )
 
   private val awsAccountId: String = sys.env("AWS_ACCOUNT_ID")
   private val awsRegion: Region = sys.env.get("AWS_REGION").map(Region.of).getOrElse(EU_WEST_1)
@@ -39,7 +45,7 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Integrat
       ExecuteAndCaptureDef(
         ExecutionDef("sample-project/device-fs", "import pio_blink"),
         CaptureDef(
-          Sampling(frequency = 3200, preTriggerSamples = 512, postTriggerSamples = 65512),
+          Sampling(frequency = 5000, preTriggerSamples = 0, postTriggerSamples = 50000),
           ((2 to 22) ++ (26 to 28)).map(GpioPin(_)).toSet,
           Trigger.Edge(GpioPin(2), goingTo = false)
         )
