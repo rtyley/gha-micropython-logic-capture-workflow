@@ -7,12 +7,15 @@ import com.madgag.logic.fileformat.Foo
 import com.madgag.logic.fileformat.gusmanb.{GusmanBCaptureCSV, GusmanBConfig}
 import com.madgag.logic.fileformat.saleae.csv.SaleaeCsv
 import com.madgag.logic.{ChannelMapping, GpioPin, TimeParser}
+import com.madgag.micropython.logiccapture.TimeExpectation
+import com.madgag.micropython.logiccapture.TimeExpectation.timeVsExpectation
 import com.madgag.micropython.logiccapture.model.*
 import com.madgag.micropython.logiccapture.worker.GusmanBConfigSupport.*
 import com.madgag.micropython.logiccapture.worker.aws.Fail
 import os.*
 
 import java.io.StringWriter
+import java.time.Duration
 import scala.io.Source
 import scala.util.Try
 
@@ -50,14 +53,16 @@ object AutomatedDeployAndCapture {
       captureProcess <- Resource.fromAutoCloseable(IO(connectCapture(gusmanbConfigFile, captureResultsFile)))
     } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
       println(s"Well, I got mpremoteProcess=$mpremoteProcess & captureProcess=$captureProcess")
-      IO.blocking(captureProcess.waitFor(executeAndCaptureDef.capture.sampling.postTriggerDuration.multipliedBy(3).dividedBy(2).toMillis)) >> IO {
-        println(s"Finished waiting for captureProcess, cap exists=${captureResultsFile.toIO.exists()}")
-        val cc = compactCapture(captureResultsFile, gusmanbConfig)
-        println(s"cc=${cc.mkString.take(50)}")
-        println(s"captureProcess.stdout=${captureProcess.stdout}")
-        val capProcOutput = captureProcess.stdout.trim()
-        println(s"capProcOutput=$capProcOutput")
-        CaptureResult(capProcOutput, cc)
+      timeVsExpectation(Duration.ofSeconds(2).plus(executeAndCaptureDef.capture.sampling.postTriggerDuration.multipliedBy(3).dividedBy(2))) { dur =>
+        IO.blocking(captureProcess.waitFor(dur.toMillis)) >> IO {
+          println(s"Finished waiting for captureProcess, cap exists=${captureResultsFile.toIO.exists()}")
+          val cc = compactCapture(captureResultsFile, gusmanbConfig)
+          println(s"cc=${cc.mkString.take(50)}")
+          println(s"captureProcess.stdout=${captureProcess.stdout}")
+          val capProcOutput = captureProcess.stdout.trim()
+          println(s"capProcOutput=$capProcOutput")
+          CaptureResult(capProcOutput, cc)
+        }
       }
     }
   }

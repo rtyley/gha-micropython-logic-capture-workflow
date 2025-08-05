@@ -9,6 +9,7 @@ import com.madgag.logic.TimeParser.DeltaParser
 import com.madgag.logic.fileformat.Foo
 import com.madgag.logic.fileformat.saleae.csv.SaleaeCsv
 import com.madgag.logic.{ChannelMapping, ChannelSignals, Time, TimeParser}
+import com.madgag.micropython.logiccapture.TimeExpectation
 import com.madgag.micropython.logiccapture.aws.AWSIO
 import com.madgag.micropython.logiccapture.client.RemoteCaptureClient.{Error, UnfinishedExecutionStates}
 import com.madgag.micropython.logiccapture.model.{CaptureResult, JobDef}
@@ -44,15 +45,12 @@ class RemoteCaptureClient(
     }).get
   }
 
-  private def findConclusionOfExecution(executionArn: String, minimumExecutionTime: Duration): IO[Either[Error, CaptureResult]] = {
-    Temporal[IO].sleep(minimumExecutionTime.toScala) >> retryingOnFailures(describeExecutionOf(executionArn))(
+  private def findConclusionOfExecution(executionArn: String, minimumExecutionTime: Duration): IO[Either[Error, CaptureResult]] = 
+    TimeExpectation.timeVsExpectation(minimumExecutionTime) { dur =>
+    Temporal[IO].sleep(dur.toScala) >> retryingOnFailures(describeExecutionOf(executionArn))(
       limitRetriesByCumulativeDelay(30.seconds, fullJitter[IO](minimumExecutionTime.dividedBy(20).toScala)),
       retryUntilSuccessful(v => !UnfinishedExecutionStates.contains(v.status()), log = ResultHandler.noop)
     ).map(RemoteCaptureClient.Error.from)
-  }.timed.map {
-    case (timedDuration, result) =>
-      println(f"minimumExecutionTime=$minimumExecutionTime actual=${timedDuration.toJava} ${timedDuration.div(minimumExecutionTime.toScala)}%2.2f")
-      result
   }
 
   private def startExecutionOf(jobDef: JobDef): IO[StartExecutionResponse] =
