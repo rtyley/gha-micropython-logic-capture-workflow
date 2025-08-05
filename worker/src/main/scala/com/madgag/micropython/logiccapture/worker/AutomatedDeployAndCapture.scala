@@ -49,10 +49,17 @@ object AutomatedDeployAndCapture {
     println(s"gusConfString=$gusConfString")
 
     (for {
-      captureProcess <- Resource.fromAutoCloseable(IO(connectCapture(gusmanbConfigFile, captureResultsFile)))
+      captureProcess <- Resource.fromAutoCloseable(IO(connectCapture(gusmanbConfigFile, captureResultsFile))).evalTap {
+        cap =>
+          IO.blocking {
+            val str = cap.stdout.readLine()
+            println(s"Cap gave me $str")
+          }
+      }
       mpremoteProcess <- Resource.fromAutoCloseable(IO(connectMPRemote(mountFolder, executeAndCaptureDef.execution)))
     } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
       println(s"Well, I got mpremoteProcess=$mpremoteProcess & captureProcess=$captureProcess")
+
       timeVsExpectation(Duration.ofSeconds(2).plus(executeAndCaptureDef.capture.sampling.postTriggerDuration.multipliedBy(3).dividedBy(2))) {
         dur => IO.blocking(captureProcess.waitFor(dur.toMillis))
       } >> IO {
@@ -86,10 +93,13 @@ object AutomatedDeployAndCapture {
     saleaeFormattedCsvExport
   }
 
-  private def connectMPRemote(mountFolder: Path, executionDef: ExecutionDef) = os.proc(
-    "mpremote",
-    "connect", "id:560ca184b37d9ae2",
-    "mount", mountFolder,
-    "exec", executionDef.exec
-  ).spawn(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
+  private def connectMPRemote(mountFolder: Path, executionDef: ExecutionDef) = {
+    println("I'm going to setup the execution Pico")
+    os.proc(
+      "mpremote",
+      "connect", "id:560ca184b37d9ae2",
+      "mount", mountFolder,
+      "exec", executionDef.exec
+    ).spawn(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
+  }
 }
