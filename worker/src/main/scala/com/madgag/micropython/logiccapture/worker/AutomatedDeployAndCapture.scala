@@ -53,16 +53,16 @@ object AutomatedDeployAndCapture {
       captureProcess <- Resource.fromAutoCloseable(IO(connectCapture(gusmanbConfigFile, captureResultsFile)))
     } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
       println(s"Well, I got mpremoteProcess=$mpremoteProcess & captureProcess=$captureProcess")
-      timeVsExpectation(Duration.ofSeconds(2).plus(executeAndCaptureDef.capture.sampling.postTriggerDuration.multipliedBy(3).dividedBy(2))) { dur =>
-        IO.blocking(captureProcess.waitFor(dur.toMillis)) >> IO {
-          println(s"Finished waiting for captureProcess, cap exists=${captureResultsFile.toIO.exists()}")
-          val cc = compactCapture(captureResultsFile, gusmanbConfig)
-          println(s"cc=${cc.mkString.take(50)}")
-          println(s"captureProcess.stdout=${captureProcess.stdout}")
-          val capProcOutput = captureProcess.stdout.trim()
-          println(s"capProcOutput=$capProcOutput")
-          CaptureResult(capProcOutput, cc)
-        }
+      timeVsExpectation(Duration.ofSeconds(2).plus(executeAndCaptureDef.capture.sampling.postTriggerDuration.multipliedBy(3).dividedBy(2))) {
+        dur => IO.blocking(captureProcess.waitFor(dur.toMillis))
+      } >> IO {
+        println(s"Finished waiting for captureProcess, cap exists=${captureResultsFile.toIO.exists()}")
+        val cc = compactCapture(captureResultsFile, gusmanbConfig)
+        println(s"cc=${cc.mkString.take(50)}")
+        println(s"captureProcess.stdout=${captureProcess.stdout}")
+        val capProcOutput = captureProcess.stdout.trim()
+        println(s"capProcOutput=$capProcOutput")
+        CaptureResult(capProcOutput, cc)
       }
     }
   }
