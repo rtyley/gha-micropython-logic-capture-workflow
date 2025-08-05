@@ -49,8 +49,8 @@ object AutomatedDeployAndCapture {
     println(s"gusConfString=$gusConfString")
 
     (for {
-      mpremoteProcess <- Resource.fromAutoCloseable(IO(connectMPRemote(mountFolder, executeAndCaptureDef.execution)))
       captureProcess <- Resource.fromAutoCloseable(IO(connectCapture(gusmanbConfigFile, captureResultsFile)))
+      mpremoteProcess <- Resource.fromAutoCloseable(IO(connectMPRemote(mountFolder, executeAndCaptureDef.execution)))
     } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
       println(s"Well, I got mpremoteProcess=$mpremoteProcess & captureProcess=$captureProcess")
       timeVsExpectation(Duration.ofSeconds(2).plus(executeAndCaptureDef.capture.sampling.postTriggerDuration.multipliedBy(3).dividedBy(2))) {
