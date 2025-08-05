@@ -38,9 +38,12 @@ object AutomatedDeployAndCapture {
     
     val gusmanbConfigFile = captureDir / "captureDef.tcs"
 
-    os.write(gusmanbConfigFile, GusmanBConfig.write(gusmanbConfig))
+    val gusConfString = GusmanBConfig.write(gusmanbConfig)
+
+    os.write(gusmanbConfigFile, gusConfString)
 
     println(s"sampleIntervalDuration=${gusmanbConfig.sampleIntervalDuration}")
+    println(s"gusConfString=$gusConfString")
 
     (for {
       mpremoteProcess <- Resource.fromAutoCloseable(IO(connectMPRemote(mountFolder, executeAndCaptureDef.execution)))
@@ -51,6 +54,7 @@ object AutomatedDeployAndCapture {
         println(s"Finished waiting for captureProcess, cap exists=${captureResultsFile.toIO.exists()}")
         val cc = compactCapture(captureResultsFile, gusmanbConfig)
         println(s"cc=${cc.mkString.take(50)}")
+        println(s"captureProcess.stdout=${captureProcess.stdout}")
         val capProcOutput = captureProcess.stdout.trim()
         println(s"capProcOutput=$capProcOutput")
         CaptureResult(capProcOutput, cc)
