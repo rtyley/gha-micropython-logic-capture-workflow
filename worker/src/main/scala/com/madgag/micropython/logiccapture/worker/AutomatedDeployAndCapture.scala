@@ -1,7 +1,7 @@
 package com.madgag.micropython.logiccapture.worker
 
 import cats.*
-import cats.effect.{IO, Resource}
+import cats.effect.{IO, Resource, Temporal}
 import com.github.tototoshi.csv.{CSVReader, CSVWriter}
 import com.madgag.logic.fileformat.Foo
 import com.madgag.logic.fileformat.gusmanb.{GusmanBCaptureCSV, GusmanBConfig}
@@ -16,6 +16,7 @@ import os.*
 
 import java.io.StringWriter
 import java.time.Duration
+import scala.concurrent.duration.DurationInt
 import scala.io.Source
 import scala.util.Try
 
@@ -54,7 +55,7 @@ object AutomatedDeployAndCapture {
           IO.blocking {
             val str = cap.stdout.readLine()
             println(s"Cap gave me $str")
-          }
+          } >> Temporal[IO].sleep(2.seconds)
       }
       mpremoteProcess <- Resource.fromAutoCloseable(IO(connectMPRemote(mountFolder, executeAndCaptureDef.execution)))
     } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
