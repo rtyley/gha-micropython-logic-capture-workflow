@@ -45,7 +45,7 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures {
       ExecuteAndCaptureDef(
         ExecutionDef("sample-project/device-fs", "import pio_blink"),
         CaptureDef(
-          Sampling(frequency = 50000, preTriggerSamples = 0, postTriggerSamples = 50000),
+          Sampling(frequency = 3200, preTriggerSamples = 512, postTriggerSamples = 6000),
           ((2 to 22) ++ (26 to 28)).map(GpioPin(_)).toSet,
           Trigger.Edge(GpioPin(2), goingTo = false)
         )
