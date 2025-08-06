@@ -12,26 +12,35 @@ on:
   schedule:
     - cron: "29 */6 * * *"
 
-jobs:
-  worker-ci:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          path: everything
-      - run: |
-          shopt -s dotglob
-          mv everything/worker/* .
-          rm -Rf everything
-          ls -la
-      - uses: guardian/setup-scala@v1
-      - run: sbt -v test
 
-  test-capture:
-    uses: ./.github/workflows/reusable-capture.yml
-    permissions: { id-token: write, contents: read }
-    with:
-      LOGIC_CAPTURE_FILE: "sample-project/logic-capture.yml"
-      ARTIFACT_NAME: 'demo-capture'
-    secrets:
-      AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # This is required for requesting the JWT
+      contents: read    # This is required for actions/checkout
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: guardian/setup-scala@v1
+      - name: Build and Test
+        run: sbt -v +test
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/github-action-worker"
+          aws-region: eu-west-1
+      - name: Run sample integration test
+        run: sbt "sample / test"
+        env:
+          PICO_CAPTURE_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT }}
+
+      - name: Test Summary
+        uses: test-summary/action@v2
+        with:
+          paths: "test-results/**/TEST-*.xml"
+        if: always()
+
+
