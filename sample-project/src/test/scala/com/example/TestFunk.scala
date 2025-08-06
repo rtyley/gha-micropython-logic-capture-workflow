@@ -36,16 +36,18 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
   
   "TestFunk" should "check that the Pico does as it is supposed to" in {
     forAll(Seq(3200, 6000, 10000, 20000, 30000, 60000, 80000)) { freq =>
-      whenReady(remoteCaptureClient.capture(jobDef(freq), ChannelMapping[GpioPin](
-        GusmanBConfig.Channel.AllAvailableGpioPins.map(gpioPin => gpioPin.toString -> gpioPin).toSeq *
-      )).unsafeToFuture()) { signals =>
-        signals.isConstant shouldBe false
+      forAll(Seq(6000, 10000, 50000, 60000)) { samples =>
+        whenReady(remoteCaptureClient.capture(jobDef(freq, samples), ChannelMapping[GpioPin](
+          GusmanBConfig.Channel.AllAvailableGpioPins.map(gpioPin => gpioPin.toString -> gpioPin).toSeq *
+        )).unsafeToFuture()) { signals =>
+          signals.isConstant shouldBe false
+        }
       }
     }
 
   }
 
-  private def jobDef(freq: Long) = {
+  private def jobDef(freq: Long, samples: Int) = {
     JobDef(
       GitSource(
         token,
@@ -57,7 +59,7 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
       ExecuteAndCaptureDef(
         ExecutionDef("sample-project/device-fs", "import pio_blink"),
         CaptureDef(
-          Sampling(frequency = freq, preTriggerSamples = 512, postTriggerSamples = 6000),
+          Sampling(frequency = freq, preTriggerSamples = 512, postTriggerSamples = samples),
           ((2 to 22) ++ (26 to 28)).map(GpioPin(_)).toSet,
           Trigger.Edge(GpioPin(2), goingTo = false)
         )
