@@ -7,6 +7,7 @@ import com.madgag.micropython.logiccapture.aws.AWSIO
 import com.madgag.micropython.logiccapture.client.RemoteCaptureClient
 import com.madgag.micropython.logiccapture.model.*
 import org.eclipse.jgit.lib.ObjectId
+import org.scalatest.Inspectors
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -16,7 +17,7 @@ import software.amazon.awssdk.regions.Region.EU_WEST_1
 import software.amazon.awssdk.services.sfn.SfnAsyncClient
 import software.amazon.awssdk.services.sfn.model.SfnRequest
 
-class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures {
+class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspectors {
 
   implicit override val patienceConfig: PatienceConfig = PatienceConfig(
     timeout = scaled(Span(40, Seconds)),
@@ -34,7 +35,18 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures {
   )
   
   "TestFunk" should "check that the Pico does as it is supposed to" in {
-    val jobDef = JobDef(
+    forAll(Seq(3200, 6000, 10000, 20000, 30000, 60000, 80000)) { freq =>
+      whenReady(remoteCaptureClient.capture(jobDef(freq), ChannelMapping[GpioPin](
+        GusmanBConfig.Channel.AllAvailableGpioPins.map(gpioPin => gpioPin.toString -> gpioPin).toSeq *
+      )).unsafeToFuture()) { signals =>
+        signals.isConstant shouldBe false
+      }
+    }
+
+  }
+
+  private def jobDef(freq: Long) = {
+    JobDef(
       GitSource(
         token,
         GitSpec(
@@ -45,17 +57,11 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures {
       ExecuteAndCaptureDef(
         ExecutionDef("sample-project/device-fs", "import pio_blink"),
         CaptureDef(
-          Sampling(frequency = 6000, preTriggerSamples = 512, postTriggerSamples = 6000),
+          Sampling(frequency = freq, preTriggerSamples = 512, postTriggerSamples = 6000),
           ((2 to 22) ++ (26 to 28)).map(GpioPin(_)).toSet,
           Trigger.Edge(GpioPin(2), goingTo = false)
         )
       )
     )
-    
-    whenReady(remoteCaptureClient.capture(jobDef, ChannelMapping[GpioPin](
-      GusmanBConfig.Channel.AllAvailableGpioPins.map(gpioPin => gpioPin.toString -> gpioPin).toSeq*
-    )).unsafeToFuture()) { signals =>
-      signals.isConstant shouldBe false
-    }
   }
 }
