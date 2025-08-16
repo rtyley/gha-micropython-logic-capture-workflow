@@ -6,6 +6,8 @@ import os.SubPath
 import scodec.bits.BitVector
 import upickle.default.*
 
+import java.time.Duration
+
 given ReadWriter[SubPath] = readwriter[String].bimap[SubPath](_.toString, SubPath(_))
 given ReadWriter[ObjectId] = readwriter[String].bimap[ObjectId](_.name, ObjectId.fromString)
 given ReadWriter[BitVector] = readwriter[String].bimap[BitVector](_.toBin, BitVector.fromValidBin(_))
@@ -37,4 +39,8 @@ case class ExecutionDef(mountFolder: SubPath, exec: String) derives ReadWriter
 
 case class ExecuteAndCaptureDef(execution: ExecutionDef, capture: CaptureDef) derives ReadWriter
 
-case class JobDef(sourceDef: GitSource, executeAndCapture: ExecuteAndCaptureDef) derives ReadWriter
+case class JobDef(sourceDef: GitSource, execs: Seq[ExecuteAndCaptureDef]) derives ReadWriter {
+  val minimumTotalExecutionTime: Duration = execs.foldLeft(Duration.ZERO) {
+    case (acc, execAndCap) => acc.plus(execAndCap.capture.sampling.postTriggerDuration)
+  }
+}

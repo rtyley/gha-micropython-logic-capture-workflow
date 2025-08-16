@@ -34,18 +34,20 @@ class RemoteCaptureClient(
 
   def capture[C](jobDef: JobDef, channelMapping: ChannelMapping[C]): IO[ChannelSignals[Delta ,C]] = for {
     startExecutionResponse <- startExecutionOf(jobDef)
-    conclusion <- findConclusionOfExecution(startExecutionResponse.executionArn, jobDef.executeAndCapture.capture.sampling.postTriggerDuration)
+    conclusion <- findConclusionOfExecution(startExecutionResponse.executionArn, jobDef.minimumTotalExecutionTime)
   } yield {
     (for {
       conc <- conclusion.toOption
-      capturedData <- conc.capturedData
-    } yield {
-      val csvDetails = SaleaeCsv.csvDetails(DeltaParser, channelMapping)
-      Foo.read(csvDetails.format)(CSVReader.open(Source.fromString(capturedData)))
-    }).get
+      capturedData <- conc.flatMap(_.flatMap(_.capturedData.map(b => boomBoom(channelMapping, b))))
+    } yield boomBoom(channelMapping, capturedData)).get
   }
 
-  private def findConclusionOfExecution(executionArn: String, minimumExecutionTime: Duration): IO[Either[Error, CaptureResult]] = 
+  private def boomBoom[C](channelMapping: ChannelMapping[C], capData: String) = {
+    val csvDetails = SaleaeCsv.csvDetails(DeltaParser, channelMapping)
+    Foo.read(csvDetails.format)(CSVReader.open(Source.fromString(capData)))
+  }
+
+  private def findConclusionOfExecution(executionArn: String, minimumExecutionTime: Duration): IO[Either[Error, Seq[Option[CaptureResult]]]] = 
     TimeExpectation.timeVsExpectation(minimumExecutionTime) { dur =>
     Temporal[IO].sleep(dur.toScala) >> retryingOnFailures(describeExecutionOf(executionArn))(
       limitRetriesByCumulativeDelay(30.seconds, fullJitter[IO](minimumExecutionTime.dividedBy(20).toScala)),
