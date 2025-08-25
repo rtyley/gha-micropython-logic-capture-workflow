@@ -12,7 +12,7 @@ import com.madgag.logic.{ChannelMapping, ChannelSignals, Time, TimeParser}
 import com.madgag.micropython.logiccapture.TimeExpectation
 import com.madgag.micropython.logiccapture.aws.AWSIO
 import com.madgag.micropython.logiccapture.client.RemoteCaptureClient.{Error, UnfinishedExecutionStates}
-import com.madgag.micropython.logiccapture.model.{CaptureResult, JobDef}
+import com.madgag.micropython.logiccapture.model.{CaptureResult, JobDef, JobOutput}
 import com.madgag.micropython.logiccapture.worker.aws.Fail
 import retry.*
 import retry.ResultHandler.retryUntilSuccessful
@@ -32,22 +32,19 @@ class RemoteCaptureClient(
   stateMachineArn: String
 ) {
 
-  def capture[C](jobDef: JobDef, channelMapping: ChannelMapping[C]): IO[ChannelSignals[Delta ,C]] = for {
+  def capture[C](jobDef: JobDef, channelMapping: ChannelMapping[C]): IO[Seq[Option[ChannelSignals[Delta, C]]]] = for {
     startExecutionResponse <- startExecutionOf(jobDef)
     conclusion <- findConclusionOfExecution(startExecutionResponse.executionArn, jobDef.minimumTotalExecutionTime)
-  } yield {
-    (for {
-      conc <- conclusion.toOption
-      capturedData <- conc.flatMap(_.flatMap(_.capturedData.map(b => boomBoom(channelMapping, b))))
-    } yield boomBoom(channelMapping, capturedData)).get
-  }
+  } yield (for {
+    conc <- conclusion.toOption
+  } yield conc.map(_.capturedData.map(parseSaleaeCsv(channelMapping, _)))).get
 
-  private def boomBoom[C](channelMapping: ChannelMapping[C], capData: String) = {
+  private def parseSaleaeCsv[C](channelMapping: ChannelMapping[C], capData: String) = {
     val csvDetails = SaleaeCsv.csvDetails(DeltaParser, channelMapping)
     Foo.read(csvDetails.format)(CSVReader.open(Source.fromString(capData)))
   }
 
-  private def findConclusionOfExecution(executionArn: String, minimumExecutionTime: Duration): IO[Either[Error, Seq[Option[CaptureResult]]]] = 
+  private def findConclusionOfExecution(executionArn: String, minimumExecutionTime: Duration): IO[Either[Error, JobOutput]] = 
     TimeExpectation.timeVsExpectation(minimumExecutionTime) { dur =>
     Temporal[IO].sleep(dur.toScala) >> retryingOnFailures(describeExecutionOf(executionArn))(
       limitRetriesByCumulativeDelay(30.seconds, fullJitter[IO](minimumExecutionTime.dividedBy(20).toScala)),
@@ -73,11 +70,11 @@ object RemoteCaptureClient {
 
     case class Unfinished(lastExecutionStatus: ExecutionStatus) extends Error
 
-    def from(resultOfAllRetries: Either[DescribeExecutionResponse, DescribeExecutionResponse]): Either[Error, CaptureResult] = resultOfAllRetries.fold(
+    def from(resultOfAllRetries: Either[DescribeExecutionResponse, DescribeExecutionResponse]): Either[Error, JobOutput] = resultOfAllRetries.fold(
       unfinished => Left(Unfinished(unfinished.status)),
       finished => Either.cond(
         finished.status == SUCCEEDED,
-        read[CaptureResult](finished.output),
+        read[JobOutput](finished.output),
         Failed(Fail(finished.error, finished.cause)))
       )
   }

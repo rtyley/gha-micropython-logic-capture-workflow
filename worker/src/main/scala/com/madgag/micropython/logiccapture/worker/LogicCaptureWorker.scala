@@ -1,7 +1,10 @@
 package com.madgag.micropython.logiccapture.worker
 
+import cats.*
+import cats.data.*
+import cats.syntax.all.*
 import cats.effect.IO
-import com.madgag.micropython.logiccapture.model.{CaptureResult, GitSource, JobDef}
+import com.madgag.micropython.logiccapture.model.{CaptureResult, GitSource, JobDef, JobOutput}
 import com.madgag.micropython.logiccapture.worker.aws.{ActivityWorker, Fail, Heartbeat}
 import com.madgag.micropython.logiccapture.worker.git.BearerAuthTransportConfig
 import com.madgag.micropython.logiccapture.worker.git.BearerAuthTransportConfig.bearerAuth
@@ -11,17 +14,16 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import os.{Path, SubPath}
 import upickle.default.*
 
-class LogicCaptureWorker extends ActivityWorker[JobDef, CaptureResult] {
+class LogicCaptureWorker extends ActivityWorker[JobDef, JobOutput] {
 
-  override def process(jobDef: JobDef)(using heartbeat: Heartbeat): IO[Either[Fail, CaptureResult]] = {
+  override def process(jobDef: JobDef)(using heartbeat: Heartbeat): IO[Either[Fail,JobOutput]] = {
     val tempDir: Path = os.temp.dir()
     for {
       sourceDir <- cloneRepo(jobDef.sourceDef, tempDir / "repo")
-      res <- AutomatedDeployAndCapture.process(sourceDir, tempDir  / "capture", jobDef.executeAndCapture)
-    } yield {
-      println(s"We got res=$res")
-      Right(res)
-    }
+      res <- jobDef.execs.zipWithIndex.traverse { (executeAndCapture, index) =>
+        AutomatedDeployAndCapture.process(sourceDir, tempDir  / s"capture-$index", executeAndCapture).flatTap(_ => heartbeat.send())
+      }
+    } yield Right(res) // TODO return fail... if appropriate
   }
 
   def cloneRepo(gitSource: GitSource, repoContainerDir: Path)(using heartbeat: Heartbeat): IO[Path] = IO {

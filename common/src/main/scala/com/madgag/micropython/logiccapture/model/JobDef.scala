@@ -44,3 +44,5 @@ case class JobDef(sourceDef: GitSource, execs: Seq[ExecuteAndCaptureDef]) derive
     case (acc, execAndCap) => acc.plus(execAndCap.capture.sampling.postTriggerDuration)
   }
 }
+
+type JobOutput = Seq[CaptureResult]

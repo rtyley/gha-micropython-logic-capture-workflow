@@ -2,6 +2,7 @@ package com.madgag.micropython.logiccapture.worker.aws
 
 import cats.effect.IO
 import software.amazon.awssdk.services.sfn.model.{SendTaskFailureResponse, SendTaskHeartbeatResponse, SendTaskSuccessResponse}
+import upickle.default.*
 
 trait TaskLease {
   val heartbeat: Heartbeat
@@ -15,7 +16,7 @@ trait Heartbeat {
   def send(): IO[SendTaskHeartbeatResponse]
 }
 
-case class Fail(error: String, cause: String) {
+case class Fail(error: String, cause: String) derives ReadWriter {
   require(cause.length <= 32768)
   require(error.length <= 256)
 }
