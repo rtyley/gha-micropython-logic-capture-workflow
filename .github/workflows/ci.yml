@@ -27,7 +27,7 @@ jobs:
       - name: Build and Test
         run: sbt -v +test
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: "arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/github-action-worker"
           aws-region: eu-west-1

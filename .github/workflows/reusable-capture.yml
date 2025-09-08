@@ -30,7 +30,7 @@ jobs:
     timeout-minutes: 4
     steps:
       - uses: actions/checkout@v5
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: "arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/github-action-worker"
           aws-region: ${{ inputs.AWS_REGION }}
