@@ -67,7 +67,7 @@ object AutomatedDeployAndCapture {
         println(s"Finished waiting for captureProcess, captureHasTerminated=$captureHasTerminated file exists=${captureResultsFile.toIO.exists()}")
         if (captureHasTerminated) {
           val cc = compactCapture(captureResultsFile, gusmanbConfig)
-          println(s"cc=${cc.mkString.take(50)}")
+          println(s"cc=${cc.mkString.take(70)} ...and dats it.")
           println(s"captureProcess.stdout=${captureProcess.stdout}")
           val capProcOutput = captureProcess.stdout.trim()
           println(s"capProcOutput=$capProcOutput")
