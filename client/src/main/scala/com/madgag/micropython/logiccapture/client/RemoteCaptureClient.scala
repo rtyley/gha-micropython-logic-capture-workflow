@@ -72,7 +72,9 @@ object RemoteCaptureClient {
 
     def from(resultOfAllRetries: Either[DescribeExecutionResponse, DescribeExecutionResponse]): Either[Error, JobOutput] = resultOfAllRetries.fold(
       unfinished => Left(Unfinished(unfinished.status)),
-      finished => Either.cond(
+      finished =>
+        println(finished.output)
+        Either.cond(
         finished.status == SUCCEEDED,
         read[JobOutput](finished.output),
         Failed(Fail(finished.error, finished.cause)))

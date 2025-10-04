@@ -88,7 +88,7 @@ object AutomatedDeployAndCapture {
       val csvDetails = GusmanBCaptureCSV.csvDetails(gusmanbConfig.sampleIntervalDuration, channelMapping)
 
       val signals = Foo.read(csvDetails.format)(CSVReader.open(Source.fromString(gusmanbCaptureResults)))
-      println(signals)
+      println(s"signals.summary=${signals.summary}")
       val writer = new StringWriter()
       Foo.write(signals, SaleaeCsv.csvDetails(TimeParser.DeltaParser, channelMapping))(CSVWriter.open(writer)(SaleaeCsv.CsvFormat))
       writer.toString

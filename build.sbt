@@ -12,7 +12,7 @@ lazy val common = (project in file("common")).settings(
     "software.amazon.awssdk" % "sfn" % awsSdkVersion,
     "com.lihaoyi" %% "upickle" % "4.2.1",
     "org.typelevel" %% "cats-effect" % "3.6.3",
-    "com.gu" %% "logic-signals" % "3.0.3",
+    "com.gu" %% "logic-signals" % "3.0.4-SNAPSHOT",
     scalaTest
   )
 )

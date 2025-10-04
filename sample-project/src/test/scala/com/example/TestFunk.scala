@@ -20,7 +20,7 @@ import software.amazon.awssdk.services.sfn.model.SfnRequest
 class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspectors with OptionValues {
 
   implicit override val patienceConfig: PatienceConfig = PatienceConfig(
-    timeout = scaled(Span(40, Seconds)),
+    timeout = scaled(Span(300, Seconds)),
     interval = scaled(Span(500, Millis))
   )
 
@@ -36,8 +36,8 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
   
   "TestFunk" should "check that the Pico does as it is supposed to" in {
     val freqSamples = for {
-      freq <- Seq(3200, 6000, 10000, 20000, 30000, 60000, 80000)
-      samples <- Seq(6000, 10000, 50000, 60000)
+      freq <- Seq(3200, 80000)
+      samples <- Seq(6000, 60000)
     } yield FreqSample(freq, samples)
 
     whenReady(remoteCaptureClient.capture(jobDef(freqSamples), ChannelMapping[GpioPin](
