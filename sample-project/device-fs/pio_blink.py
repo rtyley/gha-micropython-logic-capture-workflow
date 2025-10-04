@@ -30,5 +30,5 @@ for pin in all_available_gpio_pins:
   sm = rp2.StateMachine(0, blink, freq=clock_freq_hz, set_base=Pin(pin))
 
   sm.active(1)
-  time.sleep(0.06)
+  time.sleep(0.3)
   sm.active(0)
