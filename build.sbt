@@ -35,9 +35,10 @@ lazy val worker = (project in file("worker")).dependsOn(common).enablePlugins(Ja
     packageSummary := "Pico Logic Capture worker",
     packageDescription := "Description for Pico Logic Capture worker",
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "os-lib" % "0.11.4",
+      "com.lihaoyi" %% "os-lib" % "0.11.5",
       scalaTest
-    )
+    ) ++ Seq("core", "plugin-raspberrypi", "plugin-gpiod").map(a => "com.pi4j" % s"pi4j-$a" % "3.0.3")
 
-  // Debian / debianPackageDependencies ++= Seq("openjdk-17-jdk-headless")
+
+    // Debian / debianPackageDependencies ++= Seq("openjdk-17-jdk-headless")
   )
