@@ -20,6 +20,29 @@ import scala.concurrent.duration.DurationInt
 import scala.io.Source
 import scala.util.Try
 
+case class CaptureFilePaths(captureDir: Path) {
+  val gusmanbConfig: Path = captureDir / "captureDef.tcs"
+  val results: Path = captureDir / "capture.csv"
+}
+
+object CaptureFilePaths {
+  def setupFor(captureDir: Path, gusmanbConfig: GusmanBConfig): IO[CaptureFilePaths] = IO.delay {
+    os.makeDir.all(captureDir)
+
+    val captureFilePaths = CaptureFilePaths(captureDir)
+
+    println(s"sampleIntervalDuration=${gusmanbConfig.sampleIntervalDuration}")
+    os.write(captureFilePaths.gusmanbConfig, GusmanBConfig.write(gusmanbConfig))
+
+    captureFilePaths
+  }
+}
+
+case class CaptureContext(captureDef: CaptureDef, paths: CaptureFilePaths)
+case class ExecContext(executionDef: ExecutionDef, sourceDir: Path) {
+  val mountFolder: Path = sourceDir / executionDef.mountFolder
+}
+
 object AutomatedDeployAndCapture {
 
   sealed trait Error {
@@ -28,64 +51,70 @@ object AutomatedDeployAndCapture {
   }
 
   def process(sourceDir: Path, captureDir: Path, executeAndCaptureDef: ExecuteAndCaptureDef): IO[CaptureResult] = {
-    println(s"path is ${sys.env("PATH")}")
-    
-    val mountFolder = sourceDir /  executeAndCaptureDef.execution.mountFolder
+    val gusmanBConfig = executeAndCaptureDef.capture.toGusmanB
+    for {
+      captureFilePaths <- CaptureFilePaths.setupFor(captureDir, gusmanBConfig)
+      captureResult <- execAndCapture(
+        CaptureContext(executeAndCaptureDef.capture, captureFilePaths),
+        ExecContext(executeAndCaptureDef.execution, sourceDir)
+      )
+    } yield captureResult
+  }
 
-    println(s"mountFolder: ${os.list(mountFolder).mkString("\n")}")
+  private def execAndCapture(
+    captureContext: CaptureContext,
+    execContext: ExecContext
+  ): IO[CaptureResult] = (for {
+    captureProcess <- captureProcessResource(captureContext.paths)
+    mpremoteProcess <- mpremoteProcessResource(execContext)
+  } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
+    println(s"Well, I got mpremoteProcess=$mpremoteProcess & captureProcess=$captureProcess")
 
-    os.makeDir.all(captureDir)
-    val captureResultsFile: Path = captureDir / "capture.csv"
-    println(s"captureResultsFile=$captureResultsFile")
-    
-    val gusmanbConfig: GusmanBConfig = executeAndCaptureDef.capture.toGusmanB
-    
-    val gusmanbConfigFile = captureDir / "captureDef.tcs"
-
-    val gusConfString = GusmanBConfig.write(gusmanbConfig)
-
-    os.write(gusmanbConfigFile, gusConfString)
-
-    println(s"sampleIntervalDuration=${gusmanbConfig.sampleIntervalDuration}")
-    println(s"gusConfString=$gusConfString")
-
-    (for {
-      captureProcess <- Resource.fromAutoCloseable(IO(connectCapture(gusmanbConfigFile, captureResultsFile))).evalTap {
-        cap =>
-          IO.blocking {
-            val str = cap.stdout.readLine()
-            println(s"Cap gave me $str")
-          } >> Temporal[IO].sleep(2.seconds)
-      }
-      mpremoteProcess <- Resource.fromAutoCloseable(IO(connectMPRemote(mountFolder, executeAndCaptureDef.execution)))
-    } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
-      println(s"Well, I got mpremoteProcess=$mpremoteProcess & captureProcess=$captureProcess")
-
-      timeVsExpectation(Duration.ofSeconds(2).plus(executeAndCaptureDef.capture.sampling.postTriggerDuration.multipliedBy(3).dividedBy(2))) {
-        dur => IO.blocking(captureProcess.waitFor(dur.toMillis))
-      }.map { captureHasTerminated =>
-        println(s"Finished waiting for captureProcess, captureHasTerminated=$captureHasTerminated file exists=${captureResultsFile.toIO.exists()}")
-        if (captureHasTerminated) {
-          val cc = compactCapture(captureResultsFile, gusmanbConfig)
-          println(s"cc=${cc.mkString.take(70)} ...and dats it.")
-          println(s"captureProcess.stdout=${captureProcess.stdout}")
-          val capProcOutput = captureProcess.stdout.trim()
-          println(s"capProcOutput=$capProcOutput")
-          CaptureResult(capProcOutput, cc)
-        } else CaptureResult("DEAD DUCK", None)
-      }
+    waitALimitedTimeForTerminationOf(captureProcess, captureContext.captureDef).map { captureHasTerminated =>
+      println(s"Finished waiting for captureProcess, captureHasTerminated=$captureHasTerminated file exists=${captureContext.paths.results.toIO.exists()}")
+      if (captureHasTerminated) {
+        val cc = compactCapture(captureContext)
+        println(s"cc=${cc.mkString.take(70)} ...and dats it.")
+        val capProcOutput = captureProcess.stdout.trim()
+        println(s"capProcOutput=$capProcOutput")
+        CaptureResult(capProcOutput, cc)
+      } else CaptureResult("DEAD DUCK", None)
     }
   }
 
-  private def connectCapture(gusmanbConfigFile: Path, captureResultsFile: Path) = 
-    os.proc("TerminalCapture", "capture", "/dev/ttyACM0", gusmanbConfigFile, captureResultsFile).spawn()
+  private def waitALimitedTimeForTerminationOf(captureProcess: SubProcess, captureDef: CaptureDef) =
+    timeVsExpectation(Duration.ofSeconds(2).plus(captureDef.sampling.postTriggerDuration.multipliedBy(3).dividedBy(2))) {
+      dur => IO.blocking(captureProcess.waitFor(dur.toMillis))
+    }
 
-  private def compactCapture(captureResultsFile: Path, gusmanbConfig: GusmanBConfig) = {
+  private def mpremoteProcessResource(execContext: ExecContext): Resource[IO, SubProcess] =
+    Resource.fromAutoCloseable(IO {
+      println(s"I'm going to setup the execution Pico. mountFolder: ${os.list(execContext.mountFolder).mkString("\n")}")
+      os.proc(
+        "mpremote",
+        "connect", "id:560ca184b37d9ae2",
+        "mount", execContext.mountFolder,
+        "exec", execContext.executionDef.exec
+      ).spawn(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
+    })
+
+  private def captureProcessResource(captureFilePaths: CaptureFilePaths): Resource[IO, SubProcess] =
+    Resource.fromAutoCloseable(IO {
+      os.proc("TerminalCapture", "capture", "/dev/ttyACM0", captureFilePaths.gusmanbConfig, captureFilePaths.results).spawn()
+    }).evalTap { cap =>
+      IO.blocking {
+        val str = cap.stdout.readLine()
+        println(s"Cap gave me $str")
+      } >> Temporal[IO].sleep(2.seconds)
+    }
+
+  private def compactCapture(captureContext: CaptureContext) = {
     val saleaeFormattedCsvExport: Option[String] = for {
-      gusmanbCaptureResults <- Try(os.read(captureResultsFile)).toOption
+      gusmanbCaptureResults <- Try(os.read(captureContext.paths.results)).toOption
     } yield {
-      val channelMapping = ChannelMapping[GpioPin](gusmanbConfig.captureChannels.map(cc => cc.channelName -> cc.channelNumber.gpioPin) *)
-      val csvDetails = GusmanBCaptureCSV.csvDetails(gusmanbConfig.sampleIntervalDuration, channelMapping)
+      val gusmanBConfig = captureContext.captureDef.toGusmanB
+      val channelMapping = ChannelMapping[GpioPin](gusmanBConfig.captureChannels.map(cc => cc.channelName -> cc.channelNumber.gpioPin) *)
+      val csvDetails = GusmanBCaptureCSV.csvDetails(gusmanBConfig.sampleIntervalDuration, channelMapping)
 
       val signals = Foo.read(csvDetails.format)(CSVReader.open(Source.fromString(gusmanbCaptureResults)))
       println(s"signals.summary=${signals.summary}")
@@ -96,13 +125,4 @@ object AutomatedDeployAndCapture {
     saleaeFormattedCsvExport
   }
 
-  private def connectMPRemote(mountFolder: Path, executionDef: ExecutionDef) = {
-    println("I'm going to setup the execution Pico")
-    os.proc(
-      "mpremote",
-      "connect", "id:560ca184b37d9ae2",
-      "mount", mountFolder,
-      "exec", executionDef.exec
-    ).spawn(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
-  }
 }
