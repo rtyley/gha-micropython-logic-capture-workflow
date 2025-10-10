@@ -63,7 +63,7 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
         CaptureDef(
           Sampling(frequency = fs.freq, preTriggerSamples = 512, postTriggerSamples = fs.samples),
           ((2 to 22) ++ (26 to 28)).map(GpioPin(_)).toSet,
-          Trigger.Edge(GpioPin(2), goingTo = false)
+          Trigger.Edge(GpioPin(2), goingTo = true)
         )
       )
     }

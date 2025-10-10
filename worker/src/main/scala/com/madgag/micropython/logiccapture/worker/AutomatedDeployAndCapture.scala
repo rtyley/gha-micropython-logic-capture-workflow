@@ -13,6 +13,7 @@ import com.madgag.micropython.logiccapture.model.*
 import com.madgag.micropython.logiccapture.worker.GusmanBConfigSupport.*
 import com.madgag.micropython.logiccapture.worker.aws.Fail
 import os.*
+import com.gu.time.duration.formatting.*
 
 import java.io.StringWriter
 import java.time.Duration
@@ -30,8 +31,9 @@ object CaptureFilePaths {
     os.makeDir.all(captureDir)
 
     val captureFilePaths = CaptureFilePaths(captureDir)
-
-    println(s"sampleIntervalDuration=${gusmanbConfig.sampleIntervalDuration}")
+    
+    println(s"sampleIntervalDuration=${gusmanbConfig.sampleIntervalDuration.format()}")
+    println(s"postTriggerDuration=${gusmanbConfig.postTriggerDuration.format()}")
     os.write(captureFilePaths.gusmanbConfig, GusmanBConfig.write(gusmanbConfig))
 
     captureFilePaths
@@ -69,7 +71,7 @@ object AutomatedDeployAndCapture {
     mpremoteProcess <- mpremoteProcessResource(execContext)
   } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
     println(s"Well, I got mpremoteProcess=$mpremoteProcess & captureProcess=$captureProcess")
-
+    IO.sleep(7.seconds) >>
     waitALimitedTimeForTerminationOf(captureProcess, captureContext.captureDef).map { captureHasTerminated =>
       println(s"Finished waiting for captureProcess, captureHasTerminated=$captureHasTerminated file exists=${captureContext.paths.results.toIO.exists()}")
       if (captureHasTerminated) {
@@ -83,13 +85,12 @@ object AutomatedDeployAndCapture {
   }
 
   private def waitALimitedTimeForTerminationOf(captureProcess: SubProcess, captureDef: CaptureDef) =
-    timeVsExpectation(Duration.ofSeconds(2).plus(captureDef.sampling.postTriggerDuration.multipliedBy(3).dividedBy(2))) {
+    timeVsExpectation(Duration.ofSeconds(4).plus(captureDef.sampling.postTriggerDuration.multipliedBy(3).dividedBy(2))) {
       dur => IO.blocking(captureProcess.waitFor(dur.toMillis))
     }
 
   private def mpremoteProcessResource(execContext: ExecContext): Resource[IO, SubProcess] =
     Resource.fromAutoCloseable(IO {
-      println(s"I'm going to setup the execution Pico. mountFolder: ${os.list(execContext.mountFolder).mkString("\n")}")
       os.proc(
         "mpremote",
         "connect", "id:560ca184b37d9ae2",
@@ -105,7 +106,7 @@ object AutomatedDeployAndCapture {
       IO.blocking {
         val str = cap.stdout.readLine()
         println(s"Cap gave me $str")
-      } >> Temporal[IO].sleep(2.seconds)
+      } >> IO.sleep(2.seconds)
     }
 
   private def compactCapture(captureContext: CaptureContext) = {

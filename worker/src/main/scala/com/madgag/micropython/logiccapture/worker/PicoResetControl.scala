@@ -8,6 +8,7 @@ import com.pi4j.io.gpio.digital.{DigitalOutput, DigitalOutputProvider}
 import com.pi4j.plugin.gpiod.provider.gpio.digital.{GpioDDigitalInputProvider, GpioDDigitalOutput, GpioDDigitalOutputProvider}
 
 import java.util.concurrent.CompletableFuture
+import scala.concurrent.duration.DurationInt
 import scala.jdk.FutureConverters.*
 
 object PicoResetControl {
@@ -34,6 +35,18 @@ object PicoResetControl {
     }
   }(pi4j => IO.fromFuture(IO(pi4j.asyncShutdown().asInstanceOf[CompletableFuture[Unit]].asScala)))
 
-  def resetPinFor(pi4j: Context): IO[DigitalOutput] =
-    IO.blocking(pi4j.digitalOutput[DigitalOutputProvider]().create(21))
+  def resetPinFor(pi4j: Context): IO[GpioDDigitalOutput] = IO.blocking {
+    println("GONNA GET A RESET PIN I TELLS YA")
+    val gpioDDigitalOutputProvider: GpioDDigitalOutputProvider = pi4j.digitalOutput[GpioDDigitalOutputProvider]()
+    println(gpioDDigitalOutputProvider)
+    gpioDDigitalOutputProvider.create[GpioDDigitalOutput](21)
+  }
+
+  val resource: Resource[IO, PicoResetControl] =
+    pi4JResource.flatMap(pi4J => Resource.eval(resetPinFor(pi4J).map(PicoResetControl(_))))
+}
+
+class PicoResetControl(pin: DigitalOutput) {
+  def reset(): IO[Unit] =
+    IO.blocking(pin.low()) >> IO.sleep(200.millis) >> IO.blocking(pin.high()) >> IO.println("...Pico reset.")
 }

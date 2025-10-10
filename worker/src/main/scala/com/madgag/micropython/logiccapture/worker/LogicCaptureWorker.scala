@@ -14,13 +14,14 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import os.{Path, SubPath}
 import upickle.default.*
 
-class LogicCaptureWorker extends ActivityWorker[JobDef, JobOutput] {
+class LogicCaptureWorker(picoResetControl: PicoResetControl) extends ActivityWorker[JobDef, JobOutput] {
 
   override def process(jobDef: JobDef)(using heartbeat: Heartbeat): IO[Either[Fail,JobOutput]] = {
     val tempDir: Path = os.temp.dir()
     for {
       sourceDir <- cloneRepo(jobDef.sourceDef, tempDir / "repo")
-      res <- jobDef.execs.zipWithIndex.traverse { (executeAndCapture, index) =>
+      res <- jobDef.execs.traverseWithIndexM { (executeAndCapture, index) =>
+        picoResetControl.reset() >>
         AutomatedDeployAndCapture.process(sourceDir, tempDir  / s"capture-$index", executeAndCapture).flatTap(_ => heartbeat.send())
       }
     } yield Right(res) // TODO return fail... if appropriate

@@ -1,5 +1,8 @@
 package com.madgag.micropython.logiccapture.model
 
+import cats.*
+import cats.data.*
+import cats.syntax.all.*
 import com.madgag.logic.GpioPin
 import org.eclipse.jgit.lib.ObjectId
 import os.SubPath
@@ -7,6 +10,7 @@ import scodec.bits.BitVector
 import upickle.default.*
 
 import java.time.Duration
+import java.time.Duration.ZERO
 
 given ReadWriter[SubPath] = readwriter[String].bimap[SubPath](_.toString, SubPath(_))
 given ReadWriter[ObjectId] = readwriter[String].bimap[ObjectId](_.name, ObjectId.fromString)
@@ -39,10 +43,10 @@ case class ExecutionDef(mountFolder: SubPath, exec: String) derives ReadWriter
 
 case class ExecuteAndCaptureDef(execution: ExecutionDef, capture: CaptureDef) derives ReadWriter
 
+given Monoid[Duration] = Monoid.instance(ZERO, _ plus _)
+
 case class JobDef(sourceDef: GitSource, execs: Seq[ExecuteAndCaptureDef]) derives ReadWriter {
-  val minimumTotalExecutionTime: Duration = execs.foldLeft(Duration.ZERO) {
-    case (acc, execAndCap) => acc.plus(execAndCap.capture.sampling.postTriggerDuration)
-  }
+  val minimumTotalExecutionTime: Duration = execs.foldMap(_.capture.sampling.postTriggerDuration)
 }
 
 type JobOutput = Seq[CaptureResult]

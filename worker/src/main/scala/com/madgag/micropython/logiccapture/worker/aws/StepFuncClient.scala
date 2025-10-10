@@ -6,8 +6,11 @@ import com.madgag.micropython.logiccapture.worker.aws.StepFuncClient.{GetTaskRes
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.sfn.SfnAsyncClient
 import software.amazon.awssdk.services.sfn.model.*
-import ujson.Value
+import _root_.ujson.Value
 import upickle.default.*
+import cats.*
+import cats.data.*
+import cats.syntax.all.*
 
 class StepFuncActivityClient(sfn: SfnAsyncClient, awsAccount: String, activityName: String) {
   val awsIo: AWSIO[SfnAsyncClient, SfnRequest] = new AWSIO(sfn)
