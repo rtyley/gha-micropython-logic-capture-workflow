@@ -8,19 +8,20 @@ import com.madgag.micropython.logiccapture.model.{CaptureDef, Trigger}
 
 object GusmanBConfigSupport {
   
-  val AllGpio: Seq[GpioPin] = ((2 to 22) ++ (26 to 28)).map(GpioPin(_))
+  extension (gpioPin: GpioPin)
+    def toGusmanBChannel: GusmanBConfig.Channel = GusmanBConfig.Channel.ChannelsByGpioPin(gpioPin)
+
+    def toGusmanBCaptureChannel: GusmanBConfig.CaptureChannel =
+      GusmanBConfig.CaptureChannel(gpioPin.toGusmanBChannel, gpioPin.toString)
+
 
   extension (trigger: Trigger)
     def toGusmanB: GusmanBConfig.Trigger = trigger match {
-      case tp: Trigger.Pattern => GusmanBConfig.Trigger(
-        triggerType = TriggerType.Complex,
-        triggerChannel =  tp.channelOffset,
-        triggerBitCount = tp.bits.intSize,
-        triggerPattern = Some(tp.bits.toInt(signed = false))
-      )
+      case tp: Trigger.Pattern =>
+        GusmanBConfig.Trigger.withOptimalTypeForPattern(tp.bits, tp.baseGpioPin.toGusmanBChannel).get
       case te: Trigger.Edge => GusmanBConfig.Trigger(
         triggerType = TriggerType.Edge,
-        triggerChannel = 0, // TODO - find out what works
+        triggerChannel = te.gpioPin.toGusmanBChannel, // TODO - find out what works
         triggerInverted = Some(!te.goingTo)
       )
     }
@@ -32,9 +33,7 @@ object GusmanBConfigSupport {
       postTriggerSamples = captureDef.sampling.postTriggerSamples,
       totalSamples = captureDef.sampling.totalSamples,
       trigger = captureDef.trigger.toGusmanB,
-      captureChannels = captureDef.gpioPins.toSeq.sorted.map {
-        gpioPin => GusmanBConfig.CaptureChannel(GusmanBConfig.Channel.ChannelsByGpioPin(gpioPin), gpioPin.toString)
-      }
+      captureChannels = captureDef.gpioPins.toSeq.sorted.map(_.toGusmanBCaptureChannel)
     )
 
 }

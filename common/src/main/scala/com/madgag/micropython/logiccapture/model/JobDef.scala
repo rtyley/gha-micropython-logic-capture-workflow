@@ -1,5 +1,8 @@
 package com.madgag.micropython.logiccapture.model
 
+import cats._
+import cats.data._
+import cats.syntax.all._
 import cats.*
 import cats.data.*
 import cats.syntax.all.*
@@ -27,7 +30,16 @@ case class GitSpec(gitUrl: String, commitId: ObjectId) derives ReadWriter {
 sealed trait Trigger derives ReadWriter
 
 object Trigger {
-  case class Pattern(bits: BitVector, channelOffset: Int) extends Trigger
+  /**
+   *
+   * @param bits
+   * @param baseGpioPin - independent of what is being captured, this is the pin that is the base of the consecutive
+   *                    pins read for the trigger pattern
+   */
+  case class Pattern(bits: BitVector, baseGpioPin: GpioPin) extends Trigger {
+    lazy val stateByPin: Map[GpioPin, Boolean] = 
+      bits.toIndexedSeq.zipWithIndex.map((state, index) => GpioPin(index + baseGpioPin.number) -> state).toMap
+  }
   case class Edge(gpioPin: GpioPin, goingTo: Boolean) extends Trigger
 }
 

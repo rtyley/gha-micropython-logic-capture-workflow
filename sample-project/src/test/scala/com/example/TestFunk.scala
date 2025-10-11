@@ -65,10 +65,10 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
         ExecutionDef("sample-project/device-fs", "import pio_blink"),
         CaptureDef(
           Sampling(frequency = fs.freq, preTriggerSamples = 512, postTriggerSamples = fs.samples),
-          SortedSet.from(GpioPin(2), GpioPin(5), GpioPin(7)),
+          SortedSet(GpioPin(3), GpioPin(5), GpioPin(7)),
           // SortedSet.from((2 to 22) ++ (26 to 28)).map(GpioPin(_)),
           // Trigger.Edge(GpioPin(2), goingTo = false)
-          Trigger.Pattern(BitVector.bits(Seq(true, false, false)), 0)
+          Trigger.Pattern(BitVector.bits(Seq(false, false, true)), GpioPin(2))
         )
       )
     }
