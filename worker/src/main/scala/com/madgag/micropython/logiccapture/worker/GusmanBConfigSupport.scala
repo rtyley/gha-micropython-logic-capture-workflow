@@ -14,13 +14,13 @@ object GusmanBConfigSupport {
     def toGusmanB: GusmanBConfig.Trigger = trigger match {
       case tp: Trigger.Pattern => GusmanBConfig.Trigger(
         triggerType = TriggerType.Complex,
-        triggerChannel =  GusmanBConfig.Channel.ChannelsByGpioPin(tp.baseGpioPin),
+        triggerChannel =  tp.channelOffset,
         triggerBitCount = tp.bits.intSize,
         triggerPattern = Some(tp.bits.toInt(signed = false))
       )
       case te: Trigger.Edge => GusmanBConfig.Trigger(
         triggerType = TriggerType.Edge,
-        triggerChannel = GusmanBConfig.Channel.ChannelsByGpioPin(te.gpioPin),
+        triggerChannel = 0, // TODO - find out what works
         triggerInverted = Some(!te.goingTo)
       )
     }

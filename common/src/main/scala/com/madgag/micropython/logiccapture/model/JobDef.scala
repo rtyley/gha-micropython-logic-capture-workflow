@@ -27,13 +27,13 @@ case class GitSpec(gitUrl: String, commitId: ObjectId) derives ReadWriter {
 sealed trait Trigger derives ReadWriter
 
 object Trigger {
-  case class Pattern(bits: BitVector, baseGpioPin: GpioPin) extends Trigger
+  case class Pattern(bits: BitVector, channelOffset: Int) extends Trigger
   case class Edge(gpioPin: GpioPin, goingTo: Boolean) extends Trigger
 }
 
 case class CaptureDef(
   sampling: Sampling,
-  gpioPins: Set[GpioPin],
+  gpioPins: scala.collection.immutable.SortedSet[GpioPin],
   trigger: Trigger
 ) derives ReadWriter
 
