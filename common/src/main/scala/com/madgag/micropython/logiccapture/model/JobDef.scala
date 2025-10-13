@@ -1,8 +1,8 @@
 package com.madgag.micropython.logiccapture.model
 
-import cats._
-import cats.data._
-import cats.syntax.all._
+import cats.*
+import cats.data.*
+import cats.syntax.all.*
 import cats.*
 import cats.data.*
 import cats.syntax.all.*
@@ -14,6 +14,7 @@ import upickle.default.*
 
 import java.time.Duration
 import java.time.Duration.ZERO
+import scala.collection.immutable.SortedSet
 
 given ReadWriter[SubPath] = readwriter[String].bimap[SubPath](_.toString, SubPath(_))
 given ReadWriter[ObjectId] = readwriter[String].bimap[ObjectId](_.name, ObjectId.fromString)
@@ -45,7 +46,7 @@ object Trigger {
 
 case class CaptureDef(
   sampling: Sampling,
-  gpioPins: scala.collection.immutable.SortedSet[GpioPin],
+  gpioPins: SortedSet[GpioPin],
   trigger: Trigger
 ) derives ReadWriter
 

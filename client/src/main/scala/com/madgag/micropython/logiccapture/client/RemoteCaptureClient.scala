@@ -1,6 +1,7 @@
 package com.madgag.micropython.logiccapture.client
 
 import cats.*
+import cats.data.*
 import cats.effect.{IO, Temporal}
 import cats.syntax.all.*
 import com.github.tototoshi.csv.CSVReader
@@ -32,24 +33,34 @@ class RemoteCaptureClient(
   stateMachineArn: String
 ) {
 
-  def capture[C](jobDef: JobDef, channelMapping: ChannelMapping[C]): IO[Seq[Option[ChannelSignals[Delta, C]]]] = for {
-    startExecutionResponse <- startExecutionOf(jobDef)
+  def capture[C](jobDef: JobDef, channelMapping: ChannelMapping[C]): EitherT[IO,Error,Seq[Option[ChannelSignals[Delta, C]]]] = for {
+    startExecutionResponse <- EitherT.right(startExecutionOf(jobDef))
     conclusion <- findConclusionOfExecution(startExecutionResponse.executionArn, jobDef.minimumTotalExecutionTime)
-  } yield (for {
-    conc <- conclusion.toOption
-  } yield conc.map(_.capturedData.map(parseSaleaeCsv(channelMapping, _)))).get
+  } yield conclusion.map(_.capturedData.map(parseSaleaeCsv(channelMapping, _)))
 
   private def parseSaleaeCsv[C](channelMapping: ChannelMapping[C], capData: String) = {
     val csvDetails = SaleaeCsv.csvDetails(DeltaParser, channelMapping)
     Foo.read(csvDetails.format)(CSVReader.open(Source.fromString(capData)))
   }
 
-  private def findConclusionOfExecution(executionArn: String, minimumExecutionTime: Duration): IO[Either[Error, JobOutput]] = 
-    TimeExpectation.timeVsExpectation(minimumExecutionTime) { dur =>
-    Temporal[IO].sleep(dur.toScala) >> retryingOnFailures(describeExecutionOf(executionArn))(
-      limitRetriesByCumulativeDelay(30.seconds, fullJitter[IO](minimumExecutionTime.dividedBy(20).toScala)),
-      retryUntilSuccessful(v => !UnfinishedExecutionStates.contains(v.status()), log = ResultHandler.noop)
-    ).map(RemoteCaptureClient.Error.from)
+
+  val retryIfNotConcluded: ValueHandler[IO, DescribeExecutionResponse] = 
+    retryUntilSuccessful(v => !UnfinishedExecutionStates.contains(v.status()), log = ResultHandler.noop)
+  
+  private def findConclusionOfExecution(executionArn: String, minimumExecutionTime: Duration): EitherT[IO, Error, JobOutput] = {
+    // Perhaps ideally, we would call https://docs.aws.amazon.com/step-functions/latest/apireference/API_GetExecutionHistory.html#API_GetExecutionHistory_ResponseSyntax
+    // and find out when the activity started. Then, we would check a couple of times to ensure that the activity
+    // has not rejected our input, and then wait for the expected execution time before polling again for results.
+    def glorp(rp: RetryPolicy[IO, DescribeExecutionResponse]): EitherT[IO, Error, JobOutput] = 
+      EitherT(retryingOnFailures(describeExecutionOf(executionArn))(rp, retryIfNotConcluded).map(RemoteCaptureClient.Error.from))
+    
+    EitherT(TimeExpectation.timeVsExpectation(minimumExecutionTime) { dur =>
+      glorp(limitRetriesByCumulativeDelay(dur.toScala, fullJitter[IO](1.second))).recoverWith {
+          case _: Error.Unfinished =>
+            glorp(limitRetriesByCumulativeDelay(30.seconds, fullJitter[IO](dur.dividedBy(20).toScala)))
+        }.value
+      }
+    )
   }
 
   private def startExecutionOf(jobDef: JobDef): IO[StartExecutionResponse] =

@@ -14,6 +14,8 @@ import com.madgag.micropython.logiccapture.worker.GusmanBConfigSupport.*
 import com.madgag.micropython.logiccapture.worker.aws.Fail
 import os.*
 import com.gu.time.duration.formatting.*
+import com.fazecast.jSerialComm.SerialPort
+
 
 import java.io.StringWriter
 import java.time.Duration
@@ -31,7 +33,7 @@ object CaptureFilePaths {
     os.makeDir.all(captureDir)
 
     val captureFilePaths = CaptureFilePaths(captureDir)
-    
+
     println(s"sampleIntervalDuration=${gusmanbConfig.sampleIntervalDuration.format()}")
     println(s"postTriggerDuration=${gusmanbConfig.postTriggerDuration.format()}")
     os.write(captureFilePaths.gusmanbConfig, GusmanBConfig.write(gusmanbConfig))
@@ -99,7 +101,10 @@ object AutomatedDeployAndCapture {
       ).spawn(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
     })
 
-  private def captureProcessResource(captureFilePaths: CaptureFilePaths): Resource[IO, SubProcess] =
+  private def captureProcessResource(captureFilePaths: CaptureFilePaths): Resource[IO, SubProcess] = {
+    SerialPort.getCommPorts().foreach { sp =>
+      println(s"**** ${sp.getSystemPortPath} - ${sp.getVendorID} : ${sp.getProductID}")
+    }
     Resource.fromAutoCloseable(IO {
       os.proc("TerminalCapture", "capture", "/dev/ttyACM0", captureFilePaths.gusmanbConfig, captureFilePaths.results).spawn()
     }).evalTap { cap =>
@@ -108,6 +113,7 @@ object AutomatedDeployAndCapture {
         println(s"Cap gave me $str")
       } >> IO.sleep(2.seconds)
     }
+  }
 
   private def compactCapture(captureContext: CaptureContext) = {
     val saleaeFormattedCsvExport: Option[String] = for {

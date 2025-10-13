@@ -9,6 +9,7 @@ val scalaTest = "org.scalatest" %% "scalatest" % "3.2.19" % Test
 lazy val common = (project in file("common")).settings(
   libraryDependencies ++= Seq(
     "org.eclipse.jgit" % "org.eclipse.jgit" % "7.3.0.202506031305-r",
+    "com.fazecast" % "jSerialComm" % "2.11.2",
     "software.amazon.awssdk" % "sfn" % awsSdkVersion,
     "com.lihaoyi" %% "upickle" % "4.2.1",
     "org.typelevel" %% "cats-effect" % "3.6.3",

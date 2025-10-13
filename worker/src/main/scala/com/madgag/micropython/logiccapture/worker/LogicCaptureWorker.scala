@@ -43,9 +43,9 @@ object LogicCaptureWorker {
   val thresholds = LazyList(
     ExecutionThreshold("TooManyExecutions", 50, 
       jobDef => Option.when(jobDef.execs.size > 50)(jobDef.execs.size)),
-    ExecutionThreshold("CaptureTimeTooLong", ofSeconds(70), 
+    ExecutionThreshold("RequestedIndividualCaptureTimeTooLong", ofSeconds(70), 
       jobDef => Option.when(excessivelyLongCaptures(jobDef.execs).nonEmpty)(excessivelyLongCaptures(jobDef.execs).mapV(_.format()))),
-    ExecutionThreshold("PredictedTotalJobExecutionTimeTooLong", 
+    ExecutionThreshold("PredictedTotalJobTimeTooLong", 
       ofSeconds(270), jobDef => Option.when(jobDef.minimumTotalExecutionTime > ofSeconds(270))(jobDef.minimumTotalExecutionTime.format()))
   )
 }
