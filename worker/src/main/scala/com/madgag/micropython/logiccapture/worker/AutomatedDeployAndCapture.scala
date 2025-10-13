@@ -114,7 +114,7 @@ object AutomatedDeployAndCapture {
       IO.blocking {
         val str = cap.stdout.readLine()
         println(s"Cap gave me $str")
-      } >> IO.sleep(2.seconds)
+      }
     }
   }
 

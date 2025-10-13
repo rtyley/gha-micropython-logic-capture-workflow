@@ -18,6 +18,8 @@ import software.amazon.awssdk.regions.Region.EU_WEST_1
 import software.amazon.awssdk.services.sfn.SfnAsyncClient
 import software.amazon.awssdk.services.sfn.model.SfnRequest
 
+import java.time.Duration
+import java.time.Duration.{ofMillis, ofNanos, ofSeconds}
 import scala.collection.immutable.SortedSet
 
 class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspectors with OptionValues {
@@ -39,9 +41,9 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
   
   "TestFunk" should "check that the Pico does as it is supposed to" in {
     val freqSamples = for {
-      freq <- Seq(32000, 800000)
-      samples <- Seq(6000, 60000, 393216)
-    } yield FreqSample(freq, samples)
+      postTriggerDuration <- Seq(ofMillis(1), ofSeconds(1))
+      sampleInterval <- Seq(ofNanos(10), ofNanos(100), ofNanos(10000))
+    } yield FreqSample.givenTiming(postTriggerDuration, sampleInterval)
 
     whenReady(remoteCaptureClient.capture(jobDef(freqSamples), ChannelMapping[GpioPin](
       GusmanBConfig.Channel.AllAvailableGpioPins.map(gpioPin => gpioPin.toString -> gpioPin).toSeq *
@@ -65,10 +67,10 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
         ExecutionDef("sample-project/device-fs", "import pio_blink"),
         CaptureDef(
           Sampling(frequency = fs.freq, preTriggerSamples = 512, postTriggerSamples = fs.samples),
-          SortedSet(GpioPin(3), GpioPin(5), GpioPin(7)),
+          SortedSet.from((2 to 8).map(GpioPin(_))),
           // SortedSet.from((2 to 22) ++ (26 to 28)).map(GpioPin(_)),
           // Trigger.Edge(GpioPin(2), goingTo = false)
-          Trigger.Pattern(BitVector.bits(Seq(false, false, true)), GpioPin(3))
+          Trigger.Pattern(BitVector.bits(Seq(false, false, true)), GpioPin(2))
         )
       )
     }
@@ -76,3 +78,10 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
 }
 
 case class FreqSample(freq: Long, samples: Int)
+
+object FreqSample {
+  def givenTiming(postTriggerDuration: Duration, sampleInterval: Duration) = FreqSample(
+    freq = ofSeconds(1).dividedBy(sampleInterval),
+    samples = postTriggerDuration.dividedBy(sampleInterval).toInt
+  )
+}
