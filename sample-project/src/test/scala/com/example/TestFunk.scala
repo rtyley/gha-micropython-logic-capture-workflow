@@ -40,7 +40,7 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
   "TestFunk" should "check that the Pico does as it is supposed to" in {
     val freqSamples = for {
       freq <- Seq(3200, 80000)
-      samples <- Seq(6000, 60000)
+      samples <- Seq(6000, 60000, 393216)
     } yield FreqSample(freq, samples)
 
     whenReady(remoteCaptureClient.capture(jobDef(freqSamples), ChannelMapping[GpioPin](
@@ -68,7 +68,7 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
           SortedSet(GpioPin(3), GpioPin(5), GpioPin(7)),
           // SortedSet.from((2 to 22) ++ (26 to 28)).map(GpioPin(_)),
           // Trigger.Edge(GpioPin(2), goingTo = false)
-          Trigger.Pattern(BitVector.bits(Seq(false, false, true)), GpioPin(2))
+          Trigger.Pattern(BitVector.bits(Seq(false, false, true)), GpioPin(3))
         )
       )
     }

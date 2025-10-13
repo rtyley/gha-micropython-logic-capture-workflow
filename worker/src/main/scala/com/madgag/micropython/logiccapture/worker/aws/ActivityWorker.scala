@@ -1,5 +1,8 @@
 package com.madgag.micropython.logiccapture.worker.aws
 
+import cats.*
+import cats.data.*
+import cats.syntax.all.*
 import cats.effect.IO
 import software.amazon.awssdk.services.sfn.model.{SendTaskFailureResponse, SendTaskHeartbeatResponse, SendTaskSuccessResponse}
 import upickle.default.*
@@ -22,5 +25,5 @@ case class Fail(error: String, cause: String) derives ReadWriter {
 }
 
 trait ActivityWorker[In, Out] {
-  def process(input: In)(using heartbeat: Heartbeat): IO[Either[Fail, Out]]
+  def process(input: In)(using heartbeat: Heartbeat): EitherT[IO, Fail, Out]
 }
