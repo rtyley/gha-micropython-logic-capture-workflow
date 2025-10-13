@@ -1,9 +1,11 @@
 package com.madgag.micropython.logiccapture.worker
 
-import com.madgag.micropython.logiccapture.worker.serialport.*
 import cats.*
+import cats.data.*
 import cats.effect.{IO, Resource, Temporal}
+import com.fazecast.jSerialComm.SerialPort
 import com.github.tototoshi.csv.{CSVReader, CSVWriter}
+import com.gu.time.duration.formatting.*
 import com.madgag.logic.fileformat.Foo
 import com.madgag.logic.fileformat.gusmanb.{GusmanBCaptureCSV, GusmanBConfig}
 import com.madgag.logic.fileformat.saleae.csv.SaleaeCsv
@@ -13,10 +15,11 @@ import com.madgag.micropython.logiccapture.TimeExpectation.timeVsExpectation
 import com.madgag.micropython.logiccapture.model.*
 import com.madgag.micropython.logiccapture.worker.GusmanBConfigSupport.*
 import com.madgag.micropython.logiccapture.worker.aws.Fail
+import com.madgag.micropython.logiccapture.worker.serialport.*
 import os.*
-import com.gu.time.duration.formatting.*
-import com.fazecast.jSerialComm.SerialPort
-
+import retry.*
+import retry.ResultHandler.*
+import retry.RetryPolicies.*
 
 import java.io.StringWriter
 import java.time.Duration
@@ -50,7 +53,7 @@ case class ExecContext(executionDef: ExecutionDef, sourceDir: Path) {
 
 object AutomatedDeployAndCapture {
 
-  val GusmanBusbId: UsbId = UsbId(0x1209, 0x3020)
+  val GusmanBUsbId: UsbId = UsbId(0x1209, 0x3020)
 
   sealed trait Error {
     def causeDescription: String
@@ -104,19 +107,28 @@ object AutomatedDeployAndCapture {
       ).spawn(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
     })
 
-  private def captureProcessResource(captureFilePaths: CaptureFilePaths): Resource[IO, SubProcess] = {
-    // eg "/dev/ttyACM0"
-    val systemPortPath = SerialPort.getCommPorts.filter(_.usbId.contains(GusmanBusbId)).head.getSystemPortPath
-    println(s"Detected GusmanB systemPortPath=$systemPortPath")
-    Resource.fromAutoCloseable(IO {
-      os.proc("TerminalCapture", "capture", systemPortPath, captureFilePaths.gusmanbConfig, captureFilePaths.results).spawn()
-    }).evalTap { cap =>
-      IO.blocking {
-        val str = cap.stdout.readLine()
-        println(s"Cap gave me $str")
-      }
+  // eg "/dev/ttyACM0"
+  def getUsbSystemPortPath(usbId: UsbId): IO[Option[String]] = 
+    EitherT(retryingOnFailures(IO.blocking(SerialPort.getCommPorts.find(_.usbId.contains(usbId)).map(_.getSystemPortPath)))(
+      limitRetriesByCumulativeDelay(5.seconds, fullJitter[IO](100.millis)),
+      retryUntilSuccessful(_.isDefined, log = ResultHandler.noop)
+    )).merge
+
+  private def captureProcessResource(captureFilePaths: CaptureFilePaths): Resource[IO, SubProcess] = Resource.fromAutoCloseable(
+    for {
+      systemPortPath <- getUsbSystemPortPath(GusmanBUsbId)
+      _ <- IO.println(s"Detected GusmanB systemPortPath=$systemPortPath")
+      subProcess <- captureProcessFor(captureFilePaths, systemPortPath.get) // TODO !
+    } yield subProcess
+  ).evalTap { cap =>
+    IO.blocking {
+      val str = cap.stdout.readLine()
+      println(s"Cap gave me $str")
     }
   }
+
+  private def captureProcessFor(captureFilePaths: CaptureFilePaths, systemPortPath: String) = 
+    IO(os.proc("TerminalCapture", "capture", systemPortPath, captureFilePaths.gusmanbConfig, captureFilePaths.results).spawn())
 
   private def compactCapture(captureContext: CaptureContext) = {
     val saleaeFormattedCsvExport: Option[String] = for {

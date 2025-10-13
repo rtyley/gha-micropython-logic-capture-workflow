@@ -13,14 +13,13 @@ lazy val common = (project in file("common")).settings(
     "software.amazon.awssdk" % "sfn" % awsSdkVersion,
     "com.lihaoyi" %% "upickle" % "4.2.1",
     "org.typelevel" %% "cats-effect" % "3.6.3",
+    "com.github.cb372" %% "cats-retry" % "4.0.0",
     "com.gu" %% "logic-signals" % "3.0.4-SNAPSHOT",
     scalaTest
   )
 )
 
-lazy val client = (project in file("client")).dependsOn(common).settings(
-  libraryDependencies += "com.github.cb372" %% "cats-retry" % "4.0.0"
-)
+lazy val client = (project in file("client")).dependsOn(common)
 
 lazy val sample = (project in file("sample-project")).dependsOn(client).settings(
   libraryDependencies ++= Seq(
