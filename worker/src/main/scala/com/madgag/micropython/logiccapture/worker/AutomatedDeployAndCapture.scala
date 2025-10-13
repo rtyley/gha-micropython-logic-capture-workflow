@@ -1,5 +1,6 @@
 package com.madgag.micropython.logiccapture.worker
 
+import com.madgag.micropython.logiccapture.worker.serialport.*
 import cats.*
 import cats.effect.{IO, Resource, Temporal}
 import com.github.tototoshi.csv.{CSVReader, CSVWriter}
@@ -48,6 +49,8 @@ case class ExecContext(executionDef: ExecutionDef, sourceDir: Path) {
 }
 
 object AutomatedDeployAndCapture {
+
+  val GusmanBusbId: UsbId = UsbId(0x1209, 0x3020)
 
   sealed trait Error {
     def causeDescription: String
@@ -102,11 +105,11 @@ object AutomatedDeployAndCapture {
     })
 
   private def captureProcessResource(captureFilePaths: CaptureFilePaths): Resource[IO, SubProcess] = {
-    SerialPort.getCommPorts().foreach { sp =>
-      println(s"**** ${sp.getSystemPortPath} - ${sp.getVendorID} : ${sp.getProductID}")
-    }
+    // eg "/dev/ttyACM0"
+    val systemPortPath = SerialPort.getCommPorts.filter(_.usbId.contains(GusmanBusbId)).head.getSystemPortPath
+    println(s"Detected GusmanB systemPortPath=$systemPortPath")
     Resource.fromAutoCloseable(IO {
-      os.proc("TerminalCapture", "capture", "/dev/ttyACM0", captureFilePaths.gusmanbConfig, captureFilePaths.results).spawn()
+      os.proc("TerminalCapture", "capture", systemPortPath, captureFilePaths.gusmanbConfig, captureFilePaths.results).spawn()
     }).evalTap { cap =>
       IO.blocking {
         val str = cap.stdout.readLine()
