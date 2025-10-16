@@ -13,7 +13,7 @@ import com.madgag.logic.{ChannelMapping, GpioPin, TimeParser}
 import com.madgag.micropython.logiccapture.TimeExpectation
 import com.madgag.micropython.logiccapture.TimeExpectation.timeVsExpectation
 import com.madgag.micropython.logiccapture.model.*
-import com.madgag.micropython.logiccapture.worker.GusmanBConfigSupport.*
+import GusmanBConfigSupport.*
 import com.madgag.micropython.logiccapture.worker.aws.Fail
 import com.madgag.micropython.logiccapture.worker.serialport.*
 import os.*

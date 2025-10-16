@@ -7,10 +7,14 @@ import cats.*
 import cats.data.*
 import cats.syntax.all.*
 import com.madgag.logic.GpioPin
+import com.madgag.logic.fileformat.gusmanb.{BoardDef, CaptureMode}
 import org.eclipse.jgit.lib.ObjectId
 import os.SubPath
 import scodec.bits.BitVector
 import upickle.default.*
+import com.madgag.micropython.logiccapture.model.GusmanBConfigSupport.toGusmanBChannel
+
+import GusmanBConfigSupport.given
 
 import java.time.Duration
 import java.time.Duration.ZERO
@@ -48,7 +52,12 @@ case class CaptureDef(
   sampling: Sampling,
   gpioPins: SortedSet[GpioPin],
   trigger: Trigger
-) derives ReadWriter
+) derives ReadWriter {
+  lazy val captureMode: CaptureMode = CaptureMode.forChannels(NonEmptySet.fromSet(gpioPins.map(_.toGusmanBChannel)).get)
+  def isValidFor(boardDef: BoardDef): Boolean = {
+    sampling.totalSamples <= boardDef.maxSamplesFor(captureMode)
+  }
+}
 
 case class GitSource(githubToken: String, gitSpec: GitSpec) derives ReadWriter
 

@@ -1,6 +1,6 @@
 ThisBuild / scalaVersion := "3.3.6"
 
-val awsSdkVersion = "2.32.14"
+val awsSdkVersion = "2.35.7"
 
 lazy val root = (project in file(".")).aggregate(common, worker, client)
 
@@ -11,10 +11,10 @@ lazy val common = (project in file("common")).settings(
     "org.eclipse.jgit" % "org.eclipse.jgit" % "7.3.0.202506031305-r",
     "com.fazecast" % "jSerialComm" % "2.11.2",
     "software.amazon.awssdk" % "sfn" % awsSdkVersion,
-    "com.lihaoyi" %% "upickle" % "4.2.1",
+    "com.lihaoyi" %% "upickle" % "4.3.2",
     "org.typelevel" %% "cats-effect" % "3.6.3",
     "com.github.cb372" %% "cats-retry" % "4.0.0",
-    "com.gu" %% "logic-signals" % "3.0.4-SNAPSHOT",
+    "com.gu" %% "logic-signals" % "4.1.0",
     scalaTest
   )
 )

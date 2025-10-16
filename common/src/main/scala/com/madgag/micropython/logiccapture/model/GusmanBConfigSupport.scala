@@ -1,9 +1,9 @@
-package com.madgag.micropython.logiccapture.worker
+package com.madgag.micropython.logiccapture.model
 
 import com.madgag.logic.GpioPin
 import com.madgag.logic.fileformat.gusmanb.GusmanBConfig
-import com.madgag.logic.fileformat.gusmanb.GusmanBConfig.Trigger.TriggerType
 import com.madgag.logic.fileformat.gusmanb.GusmanBConfig.CaptureChannel
+import com.madgag.logic.fileformat.gusmanb.GusmanBConfig.Trigger.TriggerType
 import com.madgag.micropython.logiccapture.model.{CaptureDef, Trigger}
 
 object GusmanBConfigSupport {

@@ -4,8 +4,8 @@ import cats.*
 import cats.data.*
 import cats.syntax.all.*
 import cats.effect.IO
-import com.madgag.micropython.logiccapture.model.{CaptureResult, ExecuteAndCaptureDef, GitSource, JobDef, JobOutput}
-import com.madgag.micropython.logiccapture.worker.LogicCaptureWorker.{MaxCaptureTime, MaxExecutions, MaxTotalExecutionTime, thresholds}
+import com.madgag.micropython.logiccapture.model.{CaptureDef, CaptureResult, ExecuteAndCaptureDef, GitSource, JobDef, JobOutput}
+import com.madgag.micropython.logiccapture.worker.LogicCaptureWorker.{MaxCaptureTime, MaxExecutions, MaxTotalExecutionTime, failFor, thresholds}
 import com.madgag.micropython.logiccapture.worker.aws.{ActivityWorker, Fail, Heartbeat}
 import com.madgag.micropython.logiccapture.worker.git.BearerAuthTransportConfig
 import com.madgag.micropython.logiccapture.worker.git.BearerAuthTransportConfig.bearerAuth
@@ -18,6 +18,9 @@ import upickle.default.*
 import scala.math.Ordering.Implicits.*
 import java.time.Duration
 import com.gu.time.duration.formatting.*
+import com.madgag.logic.fileformat.gusmanb.{BoardDef, GusmanBConfig, SamplingIssue}
+import com.madgag.logic.fileformat.gusmanb.BoardDef.Pico2
+import com.madgag.micropython.logiccapture.model.GusmanBConfigSupport.*
 import com.madgag.scala.collection.decorators.MapDecorator
 
 import java.time.Duration.ofSeconds
@@ -40,20 +43,31 @@ object LogicCaptureWorker {
     if captureDuration > MaxCaptureTime
   } yield (index, captureDuration))
 
+  private def excessivelyBigCaptures(configs: Seq[GusmanBConfig], board: BoardDef): SortedMap[Int, SamplingIssue] = SortedMap.from(for {
+    (config, index) <- configs.zipWithIndex
+    issue <- config.issueWithBoard(board)
+  } yield (index, issue))
+
+  def failFor(jobDef: JobDef, b: BoardDef): Option[Fail] = {
+    val bom = excessivelyBigCaptures(jobDef.execs.map(_.capture.toGusmanB), b)
+    Option.when(bom.nonEmpty)(Fail("TooManySamples", bom.mapV(_.summary).toString()))
+  }
+
+
   val thresholds = LazyList(
-    ExecutionThreshold("TooManyExecutions", 50, 
+    ExecutionThreshold("TooManyExecutions", 50,
       jobDef => Option.when(jobDef.execs.size > 50)(jobDef.execs.size)),
-    ExecutionThreshold("RequestedIndividualCaptureTimeTooLong", ofSeconds(70), 
+    ExecutionThreshold("RequestedIndividualCaptureTimeTooLong", ofSeconds(70),
       jobDef => Option.when(excessivelyLongCaptures(jobDef.execs).nonEmpty)(excessivelyLongCaptures(jobDef.execs).mapV(_.format()))),
-    ExecutionThreshold("PredictedTotalJobTimeTooLong", 
+    ExecutionThreshold("PredictedTotalJobTimeTooLong",
       ofSeconds(270), jobDef => Option.when(jobDef.minimumTotalExecutionTime > ofSeconds(270))(jobDef.minimumTotalExecutionTime.format()))
   )
 }
 
-class LogicCaptureWorker(picoResetControl: PicoResetControl) extends ActivityWorker[JobDef, JobOutput] {
+class LogicCaptureWorker(picoResetControl: PicoResetControl, board: BoardDef) extends ActivityWorker[JobDef, JobOutput] {
 
   override def process(jobDef: JobDef)(using heartbeat: Heartbeat): EitherT[IO, Fail, JobOutput] = {
-    thresholds.flatMap(_.failFor(jobDef)).headOption.fold {
+    thresholds.flatMap(_.failFor(jobDef)).headOption.orElse(failFor(jobDef, board)).fold {
       val tempDir: Path = os.temp.dir()
       EitherT.right(for {
         sourceDir <- cloneRepo(jobDef.sourceDef, tempDir / "repo")
