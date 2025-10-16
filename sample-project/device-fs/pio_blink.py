@@ -20,7 +20,7 @@ def blink():
     wrap()
 
 instructions_per_full_cycle = 32 * 10
-desired_blink_frequency_hz = 25
+desired_blink_frequency_hz = 250
 clock_freq_hz = desired_blink_frequency_hz * instructions_per_full_cycle
 print(f"clock_freq_hz=${clock_freq_hz}")
 
