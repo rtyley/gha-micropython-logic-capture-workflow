@@ -56,7 +56,7 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
     token,
     GitSpec(
       "git://github.com/rtyley/gha-micropython-logic-capture-workflow.git",
-      ObjectId.fromString("2edf7eac77d51f26a61f67a26ac0921fe774528f")
+      ObjectId.fromString("5ff198fc6f052a129a5ad27e385dcdabe42c6528")
     )
   )
 
