@@ -2,29 +2,26 @@ package com.madgag.micropython.logiccapture.worker
 
 import cats.*
 import cats.data.*
-import cats.syntax.all.*
 import cats.effect.IO
-import com.madgag.micropython.logiccapture.model.{CaptureDef, CaptureResult, ExecuteAndCaptureDef, GitSource, JobDef, JobOutput}
-import com.madgag.micropython.logiccapture.worker.LogicCaptureWorker.{MaxCaptureTime, MaxExecutions, MaxTotalExecutionTime, failFor, thresholds}
+import cats.syntax.all.*
+import com.gu.time.duration.formatting.*
+import com.madgag.logic.fileformat.gusmanb.{BoardDef, GusmanBConfig, SamplingIssue}
+import com.madgag.micropython.logiccapture.model.GusmanBConfigSupport.*
+import com.madgag.micropython.logiccapture.model.{ExecuteAndCaptureDef, GitSource, JobDef, JobOutput}
+import com.madgag.micropython.logiccapture.worker.LogicCaptureWorker.{failFor, thresholds}
 import com.madgag.micropython.logiccapture.worker.aws.{ActivityWorker, Fail, Heartbeat}
 import com.madgag.micropython.logiccapture.worker.git.BearerAuthTransportConfig
 import com.madgag.micropython.logiccapture.worker.git.BearerAuthTransportConfig.bearerAuth
+import com.madgag.scala.collection.decorators.MapDecorator
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
-import os.{Path, SubPath}
-import upickle.default.*
+import os.Path
 
-import scala.math.Ordering.Implicits.*
 import java.time.Duration
-import com.gu.time.duration.formatting.*
-import com.madgag.logic.fileformat.gusmanb.{BoardDef, GusmanBConfig, SamplingIssue}
-import com.madgag.logic.fileformat.gusmanb.BoardDef.Pico2
-import com.madgag.micropython.logiccapture.model.GusmanBConfigSupport.*
-import com.madgag.scala.collection.decorators.MapDecorator
-
 import java.time.Duration.ofSeconds
 import scala.collection.immutable.SortedMap
+import scala.math.Ordering.Implicits.*
 
 object LogicCaptureWorker {
   val MaxExecutions: Int = 50
