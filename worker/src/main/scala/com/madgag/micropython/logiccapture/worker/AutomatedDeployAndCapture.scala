@@ -79,7 +79,7 @@ object AutomatedDeployAndCapture {
     mpremoteProcess <- mpremoteProcessResource(execContext)
   } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
     println(s"Well, I got mpremoteProcess=$mpremoteProcess & captureProcess=$captureProcess")
-    IO.sleep(7.seconds) >>
+    IO.sleep(2.seconds) >>
     waitALimitedTimeForTerminationOf(captureProcess, captureContext.captureDef).map { captureHasTerminated =>
       println(s"Finished waiting for captureProcess, captureHasTerminated=$captureHasTerminated file exists=${captureContext.paths.results.toIO.exists()}")
       if (captureHasTerminated) {
@@ -110,7 +110,7 @@ object AutomatedDeployAndCapture {
   // eg "/dev/ttyACM0"
   def getUsbSystemPortPath(usbId: UsbId): IO[Option[String]] = 
     EitherT(retryingOnFailures(IO.blocking(SerialPort.getCommPorts.find(_.usbId.contains(usbId)).map(_.getSystemPortPath)))(
-      limitRetriesByCumulativeDelay(5.seconds, fullJitter[IO](100.millis)),
+      limitRetriesByCumulativeDelay(4.seconds, fullJitter[IO](100.millis)),
       retryUntilSuccessful(_.isDefined, log = ResultHandler.noop)
     )).merge
 
