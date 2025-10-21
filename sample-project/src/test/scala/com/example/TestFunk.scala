@@ -3,7 +3,7 @@ package com.example
 import cats.effect.unsafe.implicits.global
 import com.madgag.logic.fileformat.gusmanb.GusmanBConfig
 import com.madgag.logic.{ChannelMapping, GpioPin}
-import com.madgag.micropython.logiccapture.aws.AWSIO
+import com.madgag.micropython.logiccapture.aws.{AWS, AWSIO}
 import com.madgag.micropython.logiccapture.client.RemoteCaptureClient
 import com.madgag.micropython.logiccapture.model.*
 import org.eclipse.jgit.lib.ObjectId
@@ -29,13 +29,13 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
     interval = scaled(Span(500, Millis))
   )
 
-  private val awsAccountId: String = sys.env("AWS_ACCOUNT_ID")
+  private val awsAccountId: String = AWS.awsAccountId
   private val awsRegion: Region = sys.env.get("AWS_REGION").map(Region.of).getOrElse(EU_WEST_1)
 
   private val token: String = sys.env("PICO_CAPTURE_GITHUB_TOKEN")
 
   val remoteCaptureClient = new RemoteCaptureClient(
-    awsIo = new AWSIO[SfnAsyncClient, SfnRequest](SfnAsyncClient.create()),
+    awsIo = new AWSIO[SfnAsyncClient, SfnRequest](AWS.SFN),
     stateMachineArn = s"arn:aws:states:${awsRegion.id}:$awsAccountId:stateMachine:pico-logic-capture"
   )
   

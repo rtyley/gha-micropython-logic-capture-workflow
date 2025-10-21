@@ -6,10 +6,11 @@ import cats.effect.IO
 import cats.syntax.all.*
 import com.gu.time.duration.formatting.*
 import com.madgag.logic.fileformat.gusmanb.{BoardDef, GusmanBConfig, SamplingIssue}
+import com.madgag.micropython.logiccapture.aws.Fail
 import com.madgag.micropython.logiccapture.model.GusmanBConfigSupport.*
 import com.madgag.micropython.logiccapture.model.{ExecuteAndCaptureDef, GitSource, JobDef, JobOutput}
 import com.madgag.micropython.logiccapture.worker.LogicCaptureWorker.{failFor, thresholds}
-import com.madgag.micropython.logiccapture.worker.aws.{ActivityWorker, Fail, Heartbeat}
+import com.madgag.micropython.logiccapture.worker.aws.{ActivityWorker, Heartbeat}
 import com.madgag.micropython.logiccapture.worker.git.BearerAuthTransportConfig
 import com.madgag.micropython.logiccapture.worker.git.BearerAuthTransportConfig.bearerAuth
 import com.madgag.scala.collection.decorators.MapDecorator

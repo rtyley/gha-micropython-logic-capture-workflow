@@ -15,7 +15,7 @@ on:
         required: true
         type: string
     secrets:
-      AWS_ACCOUNT:
+      AWS_ACCOUNT_ID:
         description: 'AWS account'
         required: true
 
@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: "arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/github-action-worker"
+          role-to-assume: "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-action-worker"
           aws-region: ${{ inputs.AWS_REGION }}
       - name: Start step function
         env:
@@ -41,7 +41,7 @@ jobs:
           BASE_64_ENCODED_CAPTURE_CONFIG_FILE=$( printf '%s' "$CAPTURE_CONFIG_FILE" | base64 )
           echo $BASE_64_ENCODED_CAPTURE_CONFIG_FILE
           INPUT_JSON='{ "githubToken": "${{ secrets.GITHUB_TOKEN }}", "repoGitUrl": "${{ github.repositoryUrl }}", "captureConfigFile": "'"$BASE_64_ENCODED_CAPTURE_CONFIG_FILE"'" }'
-          EXECUTION_ARN=$( aws stepfunctions start-execution --state-machine-arn "arn:aws:states:${{ inputs.AWS_REGION }}:${{ secrets.AWS_ACCOUNT }}:stateMachine:pico-logic-capture" --input "$(echo $INPUT_JSON | jq -R . )" --output text --query 'executionArn' )
+          EXECUTION_ARN=$( aws stepfunctions start-execution --state-machine-arn "arn:aws:states:${{ inputs.AWS_REGION }}:${{ secrets.AWS_ACCOUNT_ID }}:stateMachine:pico-logic-capture" --input "$(echo $INPUT_JSON | jq -R . )" --output text --query 'executionArn' )
           
           while [ $( aws stepfunctions describe-execution --execution-arn $EXECUTION_ARN --output text --query 'status' ) = 'RUNNING' ];
           do

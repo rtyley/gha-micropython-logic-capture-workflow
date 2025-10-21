@@ -29,13 +29,13 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: "arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/github-action-worker"
+          role-to-assume: "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-action-worker"
           aws-region: eu-west-1
       - name: Run sample integration test
         run: sbt "sample / test"
         env:
           PICO_CAPTURE_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
       - name: Test Summary
         uses: test-summary/action@v2

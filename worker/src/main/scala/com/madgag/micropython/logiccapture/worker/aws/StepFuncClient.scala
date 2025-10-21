@@ -1,16 +1,16 @@
 package com.madgag.micropython.logiccapture.worker.aws
 
+import _root_.ujson.Value
+import cats.*
+import cats.data.*
 import cats.effect.IO
-import com.madgag.micropython.logiccapture.aws.AWSIO
+import cats.syntax.all.*
+import com.madgag.micropython.logiccapture.aws.{AWSIO, Fail}
 import com.madgag.micropython.logiccapture.worker.aws.StepFuncClient.{GetTaskResponse, State}
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.sfn.SfnAsyncClient
 import software.amazon.awssdk.services.sfn.model.*
-import _root_.ujson.Value
 import upickle.default.*
-import cats.*
-import cats.data.*
-import cats.syntax.all.*
 
 class StepFuncActivityClient(sfn: SfnAsyncClient, awsAccount: String, activityName: String) {
   val awsIo: AWSIO[SfnAsyncClient, SfnRequest] = new AWSIO(sfn)

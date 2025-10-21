@@ -14,7 +14,7 @@ import com.madgag.micropython.logiccapture.TimeExpectation
 import com.madgag.micropython.logiccapture.TimeExpectation.timeVsExpectation
 import com.madgag.micropython.logiccapture.model.*
 import GusmanBConfigSupport.*
-import com.madgag.micropython.logiccapture.worker.aws.Fail
+import com.madgag.micropython.logiccapture.aws.Fail
 import com.madgag.micropython.logiccapture.worker.serialport.*
 import os.*
 import retry.*

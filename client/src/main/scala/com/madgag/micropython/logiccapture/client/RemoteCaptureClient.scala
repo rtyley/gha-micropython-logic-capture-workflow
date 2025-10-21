@@ -11,10 +11,9 @@ import com.madgag.logic.fileformat.Foo
 import com.madgag.logic.fileformat.saleae.csv.SaleaeCsv
 import com.madgag.logic.{ChannelMapping, ChannelSignals, Time, TimeParser}
 import com.madgag.micropython.logiccapture.TimeExpectation
-import com.madgag.micropython.logiccapture.aws.AWSIO
+import com.madgag.micropython.logiccapture.aws.{AWSIO, Fail}
 import com.madgag.micropython.logiccapture.client.RemoteCaptureClient.{Error, UnfinishedExecutionStates}
 import com.madgag.micropython.logiccapture.model.{CaptureResult, JobDef, JobOutput}
-import com.madgag.micropython.logiccapture.worker.aws.Fail
 import retry.*
 import retry.ResultHandler.retryUntilSuccessful
 import retry.RetryPolicies.*
