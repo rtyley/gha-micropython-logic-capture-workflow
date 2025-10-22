@@ -13,8 +13,10 @@ import upickle.default.*
 
 object Worker extends ResourceApp.Forever {
 
+  val aws = new AWS(profile = "logic-capture-worker")
+  
   private val activityClient: StepFuncActivityClient =
-    new StepFuncActivityClient(AWS.SFN, AWS.awsAccountId, "pico-logic-capture")
+    new StepFuncActivityClient(aws.SFN, AWS.awsAccountId, "pico-logic-capture")
 
   def run(args: List[String]): Resource[IO, Unit] = for {
     picoResetControl <- PicoResetControl.resource

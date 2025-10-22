@@ -7,14 +7,12 @@ import com.madgag.micropython.logiccapture.aws.{AWS, AWSIO}
 import com.madgag.micropython.logiccapture.client.RemoteCaptureClient
 import com.madgag.micropython.logiccapture.model.*
 import org.eclipse.jgit.lib.ObjectId
-import org.scalatest.{Inspectors, OptionValues}
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Millis, Seconds, Span}
+import org.scalatest.{Inspectors, OptionValues}
 import scodec.bits.BitVector
-import software.amazon.awssdk.regions.Region
-import software.amazon.awssdk.regions.Region.EU_WEST_1
 import software.amazon.awssdk.services.sfn.SfnAsyncClient
 import software.amazon.awssdk.services.sfn.model.SfnRequest
 
@@ -29,14 +27,13 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
     interval = scaled(Span(500, Millis))
   )
 
-  private val awsAccountId: String = AWS.awsAccountId
-  private val awsRegion: Region = sys.env.get("AWS_REGION").map(Region.of).getOrElse(EU_WEST_1)
+  private val token: String = sys.env("LOGIC_CAPTURE_REPO_CLONE_GITHUB_TOKEN")
 
-  private val token: String = sys.env("PICO_CAPTURE_GITHUB_TOKEN")
+  val aws = new AWS(profile = "logic-capture-client")
 
   val remoteCaptureClient = new RemoteCaptureClient(
-    awsIo = new AWSIO[SfnAsyncClient, SfnRequest](AWS.SFN),
-    stateMachineArn = s"arn:aws:states:${awsRegion.id}:$awsAccountId:stateMachine:pico-logic-capture"
+    awsIo = new AWSIO[SfnAsyncClient, SfnRequest](aws.SFN),
+    stateMachineArn = s"arn:aws:states:${AWS.region.id}:${AWS.awsAccountId}:stateMachine:pico-logic-capture"
   )
   
   "TestFunk" should "check that the Pico does as it is supposed to" in {
@@ -48,6 +45,8 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
     whenReady(remoteCaptureClient.capture(jobDef(freqSamples), ChannelMapping[GpioPin](
       GusmanBConfig.Channel.AllAvailableGpioPins.map(gpioPin => gpioPin.toString -> gpioPin).toSeq *
     )).value.map(_.left.map(err => new RuntimeException(err.toString)).toTry.get).unsafeToFuture()) { signals =>
+      (freqSamples.zip(signals)).foreach((freqSample, signal) => println(s"$freqSample : ${signal.value.summary}"))
+
       forAll(signals)(_.value.isConstant shouldBe false)
     }
   }

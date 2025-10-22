@@ -13,11 +13,17 @@ object AWS {
   def credentialsForDevAndProd(devProfile: String, prodCreds: AwsCredentialsProvider): AwsCredentialsProviderChain =
     AwsCredentialsProviderChain.of(prodCreds, ProfileCredentialsProvider.builder().profileName(devProfile).build())
 
-  lazy val credentials: AwsCredentialsProvider =  // `aws configure --profile logic-capture-client`
-    DefaultCredentialsProvider.builder().profileName("logic-capture-client").build()
+}
+
+/**
+ * @param profile used in dev, and by the worker - but not by CI, which uses `configure-aws-credentials`
+ */
+class AWS(profile: String) {
+
+  lazy val credentials: AwsCredentialsProvider = DefaultCredentialsProvider.builder().profileName(profile).build()
 
   def build[T, B <: AwsClientBuilder[B, T]](builder: B, creds: AwsCredentialsProvider = credentials): T =
-    builder.credentialsProvider(creds).region(region).build()
+    builder.credentialsProvider(creds).region(AWS.region).build()
 
   val SFN: SfnAsyncClient = build[SfnAsyncClient, SfnAsyncClientBuilder](SfnAsyncClient.builder())
 }

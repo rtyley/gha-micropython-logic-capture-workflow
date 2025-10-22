@@ -54,7 +54,7 @@ class RemoteCaptureClient(
       EitherT(retryingOnFailures(describeExecutionOf(executionArn))(rp, retryIfNotConcluded).map(RemoteCaptureClient.Error.from))
     
     EitherT(TimeExpectation.timeVsExpectation(minimumExecutionTime) { dur =>
-      glorp(limitRetriesByCumulativeDelay(dur.toScala, fullJitter[IO](1.second))).recoverWith {
+      glorp(limitRetriesByCumulativeDelay(dur.toScala * 2, fullJitter[IO](1.second))).recoverWith {
           case _: Error.Unfinished =>
             glorp(limitRetriesByCumulativeDelay(30.seconds, fullJitter[IO](dur.dividedBy(20).toScala)))
         }.value
