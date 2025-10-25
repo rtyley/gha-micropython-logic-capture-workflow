@@ -12,6 +12,7 @@ lazy val common = (project in file("common")).settings(
     "com.fazecast" % "jSerialComm" % "2.11.2",
     "software.amazon.awssdk" % "sfn" % awsSdkVersion,
     "com.lihaoyi" %% "upickle" % "4.4.0",
+    "com.gu.duration-formatting" %% "core" % "0.0.2",
     "org.typelevel" %% "cats-effect" % "3.6.3",
     "com.github.cb372" %% "cats-retry" % "4.0.0",
     "com.gu" %% "logic-signals" % "4.1.0",

@@ -7,6 +7,7 @@ import cats.syntax.all.*
 import com.gu.time.duration.formatting.*
 import com.madgag.logic.fileformat.gusmanb.{BoardDef, GusmanBConfig, SamplingIssue}
 import com.madgag.micropython.logiccapture.aws.Fail
+import com.madgag.micropython.logiccapture.logTime
 import com.madgag.micropython.logiccapture.model.GusmanBConfigSupport.*
 import com.madgag.micropython.logiccapture.model.{ExecuteAndCaptureDef, GitSource, JobDef, JobOutput}
 import com.madgag.micropython.logiccapture.worker.LogicCaptureWorker.{failFor, thresholds}
@@ -71,7 +72,7 @@ class LogicCaptureWorker(picoResetControl: PicoResetControl, board: BoardDef) ex
         sourceDir <- cloneRepo(jobDef.sourceDef, tempDir / "repo")
         res <- jobDef.execs.traverseWithIndexM { (executeAndCapture, index) =>
           picoResetControl.reset() >>
-            AutomatedDeployAndCapture.process(sourceDir, tempDir / s"capture-$index", executeAndCapture).flatTap(_ => heartbeat.send())
+            AutomatedDeployAndCapture.process(sourceDir, tempDir / s"capture-$index", executeAndCapture).flatTap(_ => heartbeat.send()).logTime(s"Capture $index")
         }
       } yield res) // TODO return fail... if appropriate
     }(EitherT.leftT(_))

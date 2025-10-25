@@ -2,7 +2,7 @@ package com.madgag.micropython.logiccapture.client
 
 import cats.*
 import cats.data.*
-import cats.effect.{IO, Temporal}
+import cats.effect.IO
 import cats.syntax.all.*
 import com.github.tototoshi.csv.CSVReader
 import com.madgag.logic.Time.Delta
@@ -54,7 +54,7 @@ class RemoteCaptureClient(
       EitherT(retryingOnFailures(describeExecutionOf(executionArn))(rp, retryIfNotConcluded).map(RemoteCaptureClient.Error.from))
     
     EitherT(TimeExpectation.timeVsExpectation(minimumExecutionTime) { dur =>
-      glorp(limitRetriesByCumulativeDelay(dur.toScala * 2, fullJitter[IO](1.second))).recoverWith {
+      glorp(limitRetriesByCumulativeDelay(dur.toScala * 5, fullJitter[IO](1.second))).recoverWith {
           case _: Error.Unfinished =>
             glorp(limitRetriesByCumulativeDelay(30.seconds, fullJitter[IO](dur.dividedBy(20).toScala)))
         }.value

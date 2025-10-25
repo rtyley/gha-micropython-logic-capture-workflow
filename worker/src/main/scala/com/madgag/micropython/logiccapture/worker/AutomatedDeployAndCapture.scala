@@ -2,7 +2,7 @@ package com.madgag.micropython.logiccapture.worker
 
 import cats.*
 import cats.data.*
-import cats.effect.{IO, Resource, Temporal}
+import cats.effect.{IO, Resource}
 import com.fazecast.jSerialComm.SerialPort
 import com.github.tototoshi.csv.{CSVReader, CSVWriter}
 import com.gu.time.duration.formatting.*
@@ -10,12 +10,13 @@ import com.madgag.logic.fileformat.Foo
 import com.madgag.logic.fileformat.gusmanb.{GusmanBCaptureCSV, GusmanBConfig}
 import com.madgag.logic.fileformat.saleae.csv.SaleaeCsv
 import com.madgag.logic.{ChannelMapping, GpioPin, TimeParser}
-import com.madgag.micropython.logiccapture.TimeExpectation
 import com.madgag.micropython.logiccapture.TimeExpectation.timeVsExpectation
-import com.madgag.micropython.logiccapture.model.*
-import GusmanBConfigSupport.*
 import com.madgag.micropython.logiccapture.aws.Fail
+import com.madgag.micropython.logiccapture.model.*
+import com.madgag.micropython.logiccapture.model.GusmanBConfigSupport.*
+import com.madgag.micropython.logiccapture.worker.AutomatedDeployAndCapture.{compactCapture, waitALimitedTimeForTerminationOf}
 import com.madgag.micropython.logiccapture.worker.serialport.*
+import com.madgag.micropython.logiccapture.{TimeExpectation, logTime}
 import os.*
 import retry.*
 import retry.ResultHandler.*
@@ -23,7 +24,7 @@ import retry.RetryPolicies.*
 
 import java.io.StringWriter
 import java.time.Duration
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.*
 import scala.io.Source
 import scala.util.Try
 
@@ -63,11 +64,11 @@ object AutomatedDeployAndCapture {
   def process(sourceDir: Path, captureDir: Path, executeAndCaptureDef: ExecuteAndCaptureDef): IO[CaptureResult] = {
     val gusmanBConfig = executeAndCaptureDef.capture.toGusmanB
     for {
-      captureFilePaths <- CaptureFilePaths.setupFor(captureDir, gusmanBConfig)
+      captureFilePaths <- CaptureFilePaths.setupFor(captureDir, gusmanBConfig).logTime("Capture files setup")
       captureResult <- execAndCapture(
         CaptureContext(executeAndCaptureDef.capture, captureFilePaths),
         ExecContext(executeAndCaptureDef.execution, sourceDir)
-      )
+      ).logTime("execAndCapture")
     } yield captureResult
   }
 
@@ -79,17 +80,13 @@ object AutomatedDeployAndCapture {
     mpremoteProcess <- mpremoteProcessResource(execContext)
   } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
     println(s"Well, I got mpremoteProcess=$mpremoteProcess & captureProcess=$captureProcess")
-    IO.sleep(2.seconds) >>
-    waitALimitedTimeForTerminationOf(captureProcess, captureContext.captureDef).map { captureHasTerminated =>
-      println(s"Finished waiting for captureProcess, captureHasTerminated=$captureHasTerminated file exists=${captureContext.paths.results.toIO.exists()}")
-      if (captureHasTerminated) {
-        val cc = compactCapture(captureContext)
-        println(s"cc=${cc.mkString.take(70)} ...and dats it.")
-        val capProcOutput = captureProcess.stdout.trim()
-        println(s"capProcOutput=$capProcOutput")
-        CaptureResult(capProcOutput, cc)
-      } else CaptureResult("DEAD DUCK", None)
-    }
+    for {
+      captureHasTerminated <- waitALimitedTimeForTerminationOf(captureProcess, captureContext.captureDef).logTime("waiting for termination")
+      _ <- IO.println(s"captureHasTerminated=$captureHasTerminated capture-file-exists=${captureContext.paths.results.toIO.exists()}")
+      captureResultOpt <- if (!captureHasTerminated) IO.pure(None) else IO.blocking(
+        compactCapture(captureContext)
+      ).logTime("compactCapture")
+    } yield CaptureResult(captureProcess.stdout.trim(), captureResultOpt)
   }
 
   private def waitALimitedTimeForTerminationOf(captureProcess: SubProcess, captureDef: CaptureDef) =
@@ -98,14 +95,14 @@ object AutomatedDeployAndCapture {
     }
 
   private def mpremoteProcessResource(execContext: ExecContext): Resource[IO, SubProcess] =
-    Resource.fromAutoCloseable(IO {
+    Resource.fromAutoCloseable(IO.blocking {
       os.proc(
         "mpremote",
         "connect", "id:560ca184b37d9ae2",
         "mount", execContext.mountFolder,
         "exec", execContext.executionDef.exec
       ).spawn(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
-    })
+    }.logTime("Creating mpremote process"))
 
   // eg "/dev/ttyACM0"
   def getUsbSystemPortPath(usbId: UsbId): IO[Option[String]] = 
@@ -116,15 +113,15 @@ object AutomatedDeployAndCapture {
 
   private def captureProcessResource(captureFilePaths: CaptureFilePaths): Resource[IO, SubProcess] = Resource.fromAutoCloseable(
     for {
-      systemPortPath <- getUsbSystemPortPath(GusmanBUsbId)
+      systemPortPath <- getUsbSystemPortPath(GusmanBUsbId).logTime("getUsbSystemPortPath")
       _ <- IO.println(s"Detected GusmanB systemPortPath=$systemPortPath")
-      subProcess <- captureProcessFor(captureFilePaths, systemPortPath.get) // TODO !
+      subProcess <- captureProcessFor(captureFilePaths, systemPortPath.get).logTime("creating captureProcessFor") // TODO !
     } yield subProcess
   ).evalTap { cap =>
     IO.blocking {
       val str = cap.stdout.readLine()
       println(s"Cap gave me $str")
-    }
+    }.logTime("Terminal first line")
   }
 
   private def captureProcessFor(captureFilePaths: CaptureFilePaths, systemPortPath: String) = 

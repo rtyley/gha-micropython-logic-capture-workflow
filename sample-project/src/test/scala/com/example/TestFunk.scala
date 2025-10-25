@@ -5,6 +5,7 @@ import com.madgag.logic.fileformat.gusmanb.GusmanBConfig
 import com.madgag.logic.{ChannelMapping, GpioPin}
 import com.madgag.micropython.logiccapture.aws.{AWS, AWSIO}
 import com.madgag.micropython.logiccapture.client.RemoteCaptureClient
+import com.gu.time.duration.formatting.*
 import com.madgag.micropython.logiccapture.model.*
 import org.eclipse.jgit.lib.ObjectId
 import org.scalatest.concurrent.ScalaFutures
@@ -45,7 +46,8 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
     whenReady(remoteCaptureClient.capture(jobDef(freqSamples), ChannelMapping[GpioPin](
       GusmanBConfig.Channel.AllAvailableGpioPins.map(gpioPin => gpioPin.toString -> gpioPin).toSeq *
     )).value.map(_.left.map(err => new RuntimeException(err.toString)).toTry.get).unsafeToFuture()) { signals =>
-      (freqSamples.zip(signals)).foreach((freqSample, signal) => println(s"$freqSample : ${signal.value.summary}"))
+      freqSamples.zip(signals).zipWithIndex.foreach { case ((freqSample, signal), index) => println(s"$index) ${freqSample.summary} :\n${signal.value.summary}")
+    }
 
       forAll(signals)(_.value.isConstant shouldBe false)
     }
@@ -76,7 +78,13 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
   )
 }
 
-case class FreqSample(freq: Long, samples: Int)
+case class FreqSample(freq: Long, samples: Int) {
+  val sampleInterval: Duration = ofSeconds(1).dividedBy(freq)
+
+  val postTriggerDuration: Duration = sampleInterval.multipliedBy(samples)
+
+  val summary: String = s"Sampling for ${postTriggerDuration.format()} with resolution of ${sampleInterval.format()}"
+}
 
 object FreqSample {
   def givenTiming(postTriggerDuration: Duration, sampleInterval: Duration) = FreqSample(
