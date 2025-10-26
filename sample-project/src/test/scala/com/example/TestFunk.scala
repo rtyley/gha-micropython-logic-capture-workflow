@@ -39,7 +39,7 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
   
   "TestFunk" should "check that the Pico does as it is supposed to" in {
     val freqSamples = for {
-      postTriggerDuration <- Seq(ofMillis(1), ofMillis(19))
+      postTriggerDuration <- Seq(ofMillis(1), ofMillis(19),ofMillis(2), ofMillis(8))
       sampleInterval <- Seq(ofNanos(50), ofNanos(10000))
     } yield FreqSample.givenTiming(postTriggerDuration, sampleInterval)
 

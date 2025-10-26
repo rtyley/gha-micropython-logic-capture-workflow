@@ -68,7 +68,7 @@ case class ExecuteAndCaptureDef(execution: ExecutionDef, capture: CaptureDef) de
 given Monoid[Duration] = Monoid.instance(ZERO, _ plus _)
 
 case class JobDef(sourceDef: GitSource, execs: Seq[ExecuteAndCaptureDef]) derives ReadWriter {
-  val minimumTotalExecutionTime: Duration = execs.foldMap(_.capture.sampling.postTriggerDuration)
+  val minimumTotalExecutionTime: Duration = execs.foldMap(_.capture.sampling.postTriggerDuration.plusSeconds(4)).plusSeconds(3)
 }
 
 type JobOutput = Seq[CaptureResult]
