@@ -7,7 +7,15 @@ val awsSdkVersion = "2.36.2"
 
 val scalaTest = "org.scalatest" %% "scalatest" % "3.2.19" % Test
 
-lazy val common = (project in file("common")).settings(
+ThisBuild / scalacOptions := Seq("-deprecation", "-release:21")
+
+val artifactProducingSettings = Seq(
+  organization := "com.madgag.logic-capture",
+  licenses := Seq(License.Apache2),
+  libraryDependencies += scalaTest
+)
+
+lazy val common = (project in file("common")).settings(artifactProducingSettings).settings(
   libraryDependencies ++= Seq(
     "org.eclipse.jgit" % "org.eclipse.jgit" % "7.4.0.202509020913-r",
     "com.fazecast" % "jSerialComm" % "2.11.2",
@@ -22,11 +30,7 @@ lazy val common = (project in file("common")).settings(
   )
 )
 
-lazy val client = (project in file("client")).dependsOn(common).settings(
-  organization := "com.madgag",
-  licenses := Seq(License.Apache2),
-  scalacOptions := Seq("-deprecation", "-release:21")
-)
+lazy val client = (project in file("client")).dependsOn(common).settings(artifactProducingSettings)
 
 lazy val sample = (project in file("sample-project")).dependsOn(client).settings(
   libraryDependencies ++= Seq(

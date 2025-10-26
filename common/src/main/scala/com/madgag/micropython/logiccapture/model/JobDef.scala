@@ -32,6 +32,12 @@ case class GitSpec(gitUrl: String, commitId: ObjectId) derives ReadWriter {
   val httpsGitUrl: String = "https" + gitUrl.stripPrefix("git")
 }
 
+object GitSpec {
+  def forPathInThisRepo(path: String) = {
+    ???
+  }
+}
+
 sealed trait Trigger derives ReadWriter
 
 object Trigger {
