@@ -15,6 +15,7 @@ lazy val common = (project in file("common")).settings(
     "com.gu.duration-formatting" %% "core" % "0.0.2",
     "org.typelevel" %% "cats-effect" % "3.6.3",
     "com.github.cb372" %% "cats-retry" % "4.0.0",
+    "co.fs2" %% "fs2-io" % "3.12.2",
     "com.gu" %% "logic-signals" % "4.1.0",
     scalaTest
   )

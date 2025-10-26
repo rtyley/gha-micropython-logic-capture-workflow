@@ -9,7 +9,7 @@ import com.madgag.logic.fileformat.gusmanb.{BoardDef, GusmanBConfig, SamplingIss
 import com.madgag.micropython.logiccapture.aws.Fail
 import com.madgag.micropython.logiccapture.logTime
 import com.madgag.micropython.logiccapture.model.GusmanBConfigSupport.*
-import com.madgag.micropython.logiccapture.model.{ExecuteAndCaptureDef, GitSource, JobDef, JobOutput}
+import com.madgag.micropython.logiccapture.model.{CaptureResult, ExecuteAndCaptureDef, GitSource, JobDef, JobOutput}
 import com.madgag.micropython.logiccapture.worker.LogicCaptureWorker.{failFor, thresholds}
 import com.madgag.micropython.logiccapture.worker.aws.{ActivityWorker, Heartbeat}
 import com.madgag.micropython.logiccapture.worker.git.BearerAuthTransportConfig
@@ -63,6 +63,10 @@ object LogicCaptureWorker {
   )
 }
 
+
+case class CaptureProcessReport(processOutput: String, detailsForCompletedCapture: Option[CaptureContext])
+
+
 class LogicCaptureWorker(picoResetControl: PicoResetControl, board: BoardDef) extends ActivityWorker[JobDef, JobOutput] {
 
   override def process(jobDef: JobDef)(using heartbeat: Heartbeat): EitherT[IO, Fail, JobOutput] = {
@@ -70,13 +74,21 @@ class LogicCaptureWorker(picoResetControl: PicoResetControl, board: BoardDef) ex
       val tempDir: Path = os.temp.dir()
       EitherT.right(for {
         sourceDir <- cloneRepo(jobDef.sourceDef, tempDir / "repo")
-        res <- jobDef.execs.traverseWithIndexM { (executeAndCapture, index) =>
-          picoResetControl.reset() >>
-            AutomatedDeployAndCapture.process(sourceDir, tempDir / s"capture-$index", executeAndCapture).flatTap(_ => heartbeat.send()).logTime(s"Capture $index")
-        }
+        res <- fs2.Stream(jobDef.execs *).zipWithIndex.covary[IO].parEvalMap(2) { (executeAndCapture, index) =>
+          CaptureFilePaths.setupFor(tempDir / s"capture-$index", executeAndCapture.capture).logTime(s"Capture $index: files setup").map(_ -> executeAndCapture)
+        }.evalMap { (captureFilePaths, executeAndCapture) =>
+          picoResetControl.reset() >> AutomatedDeployAndCapture.execAndCap(executeAndCapture, captureFilePaths, sourceDir).logTime(s"execAndCap ${captureFilePaths.results}")
+        }.parEvalMap(4) { captureProcessReport =>
+          for {
+            _ <- heartbeat.send()
+            compactCap <- captureProcessReport.detailsForCompletedCapture.flatTraverse(AutomatedDeployAndCapture.compactCapture).logTime("parsing capture result")
+          } yield CaptureResult(captureProcessReport.processOutput, compactCap)
+        }.compile.toList
       } yield res) // TODO return fail... if appropriate
     }(EitherT.leftT(_))
   }
+
+  // .flatTap(_ => heartbeat.send()).logTime(s"Capture $index")
 
   def cloneRepo(gitSource: GitSource, repoContainerDir: Path)(using heartbeat: Heartbeat): IO[Path] = IO {
     val httpsGitUrl = gitSource.gitSpec.httpsGitUrl

@@ -23,6 +23,7 @@ import retry.ResultHandler.*
 import retry.RetryPolicies.*
 
 import java.io.StringWriter
+import java.nio.file.Files
 import java.time.Duration
 import scala.concurrent.duration.*
 import scala.io.Source
@@ -34,7 +35,8 @@ case class CaptureFilePaths(captureDir: Path) {
 }
 
 object CaptureFilePaths {
-  def setupFor(captureDir: Path, gusmanbConfig: GusmanBConfig): IO[CaptureFilePaths] = IO.delay {
+  def setupFor(captureDir: Path, captureDef: CaptureDef): IO[CaptureFilePaths] = IO.blocking {
+    val gusmanbConfig: GusmanBConfig = captureDef.toGusmanB
     os.makeDir.all(captureDir)
 
     val captureFilePaths = CaptureFilePaths(captureDir)
@@ -60,33 +62,29 @@ object AutomatedDeployAndCapture {
     def causeDescription: String
     def asFail: Fail = Fail(this.getClass.getSimpleName, causeDescription)
   }
+//
+//  def process(sourceDir: Path, captureDir: Path, executeAndCaptureDef: ExecuteAndCaptureDef): IO[CaptureResult] = for {
+//    captureFilePaths <- CaptureFilePaths.setupFor(captureDir, executeAndCaptureDef.capture).logTime("Capture files setup")
+//    captureResult <- execAndCap(executeAndCaptureDef, captureFilePaths, sourceDir).logTime("execAndCap")
+//  } yield captureResult
 
-  def process(sourceDir: Path, captureDir: Path, executeAndCaptureDef: ExecuteAndCaptureDef): IO[CaptureResult] = {
-    val gusmanBConfig = executeAndCaptureDef.capture.toGusmanB
-    for {
-      captureFilePaths <- CaptureFilePaths.setupFor(captureDir, gusmanBConfig).logTime("Capture files setup")
-      captureResult <- execAndCapture(
-        CaptureContext(executeAndCaptureDef.capture, captureFilePaths),
-        ExecContext(executeAndCaptureDef.execution, sourceDir)
-      ).logTime("execAndCapture")
-    } yield captureResult
-  }
+  def execAndCap(executeAndCaptureDef: ExecuteAndCaptureDef, captureFilePaths: CaptureFilePaths, sourceDir: Path): IO[CaptureProcessReport] =
+    execAndCapture(
+      CaptureContext(executeAndCaptureDef.capture, captureFilePaths),
+      ExecContext(executeAndCaptureDef.execution, sourceDir)
+    )
 
   private def execAndCapture(
     captureContext: CaptureContext,
     execContext: ExecContext
-  ): IO[CaptureResult] = (for {
+  ): IO[CaptureProcessReport] = (for {
     captureProcess <- captureProcessResource(captureContext.paths)
     mpremoteProcess <- mpremoteProcessResource(execContext)
   } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
     println(s"Well, I got mpremoteProcess=$mpremoteProcess & captureProcess=$captureProcess")
     for {
       captureHasTerminated <- waitALimitedTimeForTerminationOf(captureProcess, captureContext.captureDef).logTime("waiting for termination")
-      _ <- IO.println(s"captureHasTerminated=$captureHasTerminated capture-file-exists=${captureContext.paths.results.toIO.exists()}")
-      captureResultOpt <- if (!captureHasTerminated) IO.pure(None) else IO.blocking(
-        compactCapture(captureContext)
-      ).logTime("compactCapture")
-    } yield CaptureResult(captureProcess.stdout.trim(), captureResultOpt)
+    } yield CaptureProcessReport(captureProcess.stdout.trim(), Option.when(captureHasTerminated)(captureContext))
   }
 
   private def waitALimitedTimeForTerminationOf(captureProcess: SubProcess, captureDef: CaptureDef) =
@@ -127,21 +125,18 @@ object AutomatedDeployAndCapture {
   private def captureProcessFor(captureFilePaths: CaptureFilePaths, systemPortPath: String) = 
     IO(os.proc("TerminalCapture", "capture", systemPortPath, captureFilePaths.gusmanbConfig, captureFilePaths.results).spawn())
 
-  private def compactCapture(captureContext: CaptureContext) = {
-    val saleaeFormattedCsvExport: Option[String] = for {
-      gusmanbCaptureResults <- Try(os.read(captureContext.paths.results)).toOption
-    } yield {
-      val gusmanBConfig = captureContext.captureDef.toGusmanB
-      val channelMapping = ChannelMapping[GpioPin](gusmanBConfig.captureChannels.map(cc => cc.channelName -> cc.channelNumber.gpioPin) *)
-      val csvDetails = GusmanBCaptureCSV.csvDetails(gusmanBConfig.sampleIntervalDuration, channelMapping)
+  def compactCapture(captureContext: CaptureContext): IO[Option[String]] = OptionT.whenF(Files.exists(captureContext.paths.results.toNIO)) {
+    val gusmanBConfig = captureContext.captureDef.toGusmanB
+    val channelMapping = ChannelMapping[GpioPin](gusmanBConfig.captureChannels.map(cc => cc.channelName -> cc.channelNumber.gpioPin) *)
+    val csvDetails = GusmanBCaptureCSV.csvDetails(gusmanBConfig.sampleIntervalDuration, channelMapping)
 
-      val signals = Foo.read(csvDetails.format)(CSVReader.open(Source.fromString(gusmanbCaptureResults)))
+    IO.blocking {
+      val signals = Foo.read(csvDetails.format)(CSVReader.open(captureContext.paths.results.toIO))
       println(s"signals.summary=${signals.summary}")
       val writer = new StringWriter()
       Foo.write(signals, SaleaeCsv.csvDetails(TimeParser.DeltaParser, channelMapping))(CSVWriter.open(writer)(SaleaeCsv.CsvFormat))
       writer.toString
     }
-    saleaeFormattedCsvExport
-  }
+  }.value
 
 }
