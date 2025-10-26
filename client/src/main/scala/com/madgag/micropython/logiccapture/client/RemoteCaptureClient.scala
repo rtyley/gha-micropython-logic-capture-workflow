@@ -21,6 +21,7 @@ import software.amazon.awssdk.services.sfn.SfnAsyncClient
 import software.amazon.awssdk.services.sfn.model.*
 import software.amazon.awssdk.services.sfn.model.ExecutionStatus.{PENDING_REDRIVE, RUNNING, SUCCEEDED}
 import upickle.default.*
+import com.gu.time.duration.formatting.*
 
 import java.time.Duration
 import scala.concurrent.duration.*
@@ -52,10 +53,11 @@ class RemoteCaptureClient(
     // has not rejected our input, and then wait for the expected execution time before polling again for results.
     def glorp(rp: RetryPolicy[IO, DescribeExecutionResponse]): EitherT[IO, Error, JobOutput] = 
       EitherT(retryingOnFailures(describeExecutionOf(executionArn))(rp, retryIfNotConcluded).map(RemoteCaptureClient.Error.from))
-    
+    println(s"minimumExecutionTime: ${minimumExecutionTime.format()}")
     EitherT(TimeExpectation.timeVsExpectation(minimumExecutionTime) { dur =>
-      glorp(limitRetriesByCumulativeDelay(dur.toScala * 5, fullJitter[IO](1.second))).recoverWith {
+      glorp(limitRetriesByCumulativeDelay(dur.toScala, fullJitter[IO](1.second))).recoverWith {
           case _: Error.Unfinished =>
+            println(s"Now into 'it should be done' time")
             glorp(limitRetriesByCumulativeDelay(30.seconds, fullJitter[IO](dur.dividedBy(20).toScala)))
         }.value
       }
