@@ -64,7 +64,7 @@ class RemoteCaptureClient(
     )
   }
 
-  private def startExecutionOf(jobDef: JobDef): IO[StartExecutionResponse] =
+  private def startExecutionOf(jobDef: JobDef): IO[StartExecutionResponse] = IO.println(s"gitSpec: ${jobDef.sourceDef.gitSpec}") >>
     awsIo.glurk(StartExecutionRequest.builder().stateMachineArn(stateMachineArn).input(write(jobDef)).build())(_.startExecution)
 
   private def describeExecutionOf(executionArn: String): IO[DescribeExecutionResponse] =

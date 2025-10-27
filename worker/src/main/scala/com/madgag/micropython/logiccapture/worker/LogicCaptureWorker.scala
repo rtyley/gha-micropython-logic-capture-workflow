@@ -91,12 +91,12 @@ class LogicCaptureWorker(picoResetControl: PicoResetControl, board: BoardDef) ex
   // .flatTap(_ => heartbeat.send()).logTime(s"Capture $index")
 
   def cloneRepo(gitSource: GitSource, repoContainerDir: Path)(using heartbeat: Heartbeat): IO[Path] = IO {
-    val cloneableUrl = gitSource.gitSpec.gitUrl //.httpsGitUrl
+    val cloneableUrl = gitSource.gitSpec.httpsGitUrl
     println(s"going to try to clone '$cloneableUrl' to $repoContainerDir")
     val repository = Git.cloneRepository()
       .setCredentialsProvider(new UsernamePasswordCredentialsProvider("x-access-token", gitSource.githubToken))
       .setTransportConfigCallback(bearerAuth(gitSource.githubToken))
-      .setDirectory(repoContainerDir.toIO).setURI(cloneableUrl).call().getRepository.asInstanceOf[FileRepository]
+      .setDirectory(repoContainerDir.toIO).setURI(cloneableUrl.toString).call().getRepository.asInstanceOf[FileRepository]
 
     println(s"Clone is done, right? $repository")
     os.Path(repository.getWorkTree)

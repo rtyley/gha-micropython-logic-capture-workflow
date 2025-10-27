@@ -26,36 +26,9 @@ import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 
 given ReadWriter[SubPath] = readwriter[String].bimap[SubPath](_.toString, SubPath(_))
-given ReadWriter[ObjectId] = readwriter[String].bimap[ObjectId](_.name, ObjectId.fromString)
 given ReadWriter[BitVector] = readwriter[String].bimap[BitVector](_.toBin, BitVector.fromValidBin(_))
 given ReadWriter[GpioPin] = readwriter[Int].bimap[GpioPin](_.number, GpioPin(_))
 
-
-case class GitSpec(gitUrl: String, commitId: ObjectId) derives ReadWriter {
-  // require(gitUrl.startsWith("git://") && gitUrl.endsWith(".git"))
-
-  // val httpsGitUrl: String = "https" + gitUrl.stripPrefix("git")
-}
-
-object GitSpec {
-  def forPathInThisRepo(path: os.SubPath) = {
-    extension (paths: java.util.Set[String])
-      def relevantPaths: Set[SubPath] =
-        paths.asScala.toSet.map(f => SubPath(f.split('/').toIndexedSeq)).filter(_.startsWith(path))
-
-    val git = Git.open(new File(""))
-    // git.diff().setPathFilter(TreeFilter)
-    val status = git.status().call()
-    val uncommitted = status.getUncommittedChanges.relevantPaths
-    require(uncommitted.isEmpty)
-    require(status.getUntracked.relevantPaths.isEmpty)
-    val remoteUris = git.remoteList().call().asScala.head.getURIs.asScala
-    println(remoteUris)
-    val headCommit = git.getRepository.resolve(Constants.HEAD)
-    println(headCommit)
-    GitSpec(remoteUris.head.toString, headCommit)
-  }
-}
 
 sealed trait Trigger derives ReadWriter
 
@@ -79,12 +52,11 @@ case class CaptureDef(
   trigger: Trigger
 ) derives ReadWriter {
   lazy val captureMode: CaptureMode = CaptureMode.forChannels(NonEmptySet.fromSet(gpioPins.map(_.toGusmanBChannel)).get)
-  def isValidFor(boardDef: BoardDef): Boolean = {
-    sampling.totalSamples <= boardDef.maxSamplesFor(captureMode)
-  }
+  
+  def isValidFor(boardDef: BoardDef): Boolean = sampling.totalSamples <= boardDef.maxSamplesFor(captureMode)
 }
 
-case class GitSource(githubToken: String, gitSpec: GitSpec) derives ReadWriter
+
 
 case class ExecutionDef(mountFolder: SubPath, exec: String) derives ReadWriter
 

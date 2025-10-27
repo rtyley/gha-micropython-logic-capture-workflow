@@ -18,6 +18,7 @@ val artifactProducingSettings = Seq(
 lazy val common = (project in file("common")).settings(artifactProducingSettings).settings(
   libraryDependencies ++= Seq(
     "org.eclipse.jgit" % "org.eclipse.jgit" % "7.4.0.202509020913-r",
+    "com.softwaremill.sttp.client4" %% "core" % "4.0.12",
     "com.fazecast" % "jSerialComm" % "2.11.2",
     "software.amazon.awssdk" % "sfn" % awsSdkVersion,
     "com.lihaoyi" %% "upickle" % "4.4.0",

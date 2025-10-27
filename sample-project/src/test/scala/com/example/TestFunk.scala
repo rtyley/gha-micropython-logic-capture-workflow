@@ -55,14 +55,7 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
 
   GitSpec.forPathInThisRepo("sample-project/device-fs")
 
-  val gitSource = GitSource(
-    token,
-    GitSpec.forPathInThisRepo("sample-project/device-fs")
-//    GitSpec(
-//      "git://github.com/rtyley/gha-micropython-logic-capture-workflow.git",
-//      ObjectId.fromString("38806ae0df4d7fcad904868f8388031a462f5d41")
-//    )
-  )
+  val gitSource = GitSource(token, GitSpec.forPathInThisRepo("sample-project/device-fs"))
 
   private def jobDef(freqSamples: Seq[FreqSample]) = JobDef(
     gitSource,
