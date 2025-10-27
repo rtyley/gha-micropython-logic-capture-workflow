@@ -8,17 +8,22 @@ import cats.data.*
 import cats.syntax.all.*
 import com.madgag.logic.GpioPin
 import com.madgag.logic.fileformat.gusmanb.{BoardDef, CaptureMode}
-import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.lib.{Constants, ObjectId}
 import os.SubPath
 import scodec.bits.BitVector
 import upickle.default.*
 import com.madgag.micropython.logiccapture.model.GusmanBConfigSupport.toGusmanBChannel
-
 import GusmanBConfigSupport.given
+import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.internal.storage.file.FileRepository
 
+import java.io.File
+import java.nio.file.Files
 import java.time.Duration
 import java.time.Duration.ZERO
 import scala.collection.immutable.SortedSet
+import scala.collection.mutable
+import scala.jdk.CollectionConverters.*
 
 given ReadWriter[SubPath] = readwriter[String].bimap[SubPath](_.toString, SubPath(_))
 given ReadWriter[ObjectId] = readwriter[String].bimap[ObjectId](_.name, ObjectId.fromString)
@@ -33,7 +38,21 @@ case class GitSpec(gitUrl: String, commitId: ObjectId) derives ReadWriter {
 }
 
 object GitSpec {
-  def forPathInThisRepo(path: String) = {
+  def forPathInThisRepo(path: os.SubPath) = {
+    extension (paths: java.util.Set[String])
+      def relevantPaths: Set[SubPath] =
+        paths.asScala.toSet.map(f => SubPath(f.split('/').toIndexedSeq)).filter(_.startsWith(path))
+
+    val git = Git.open(new File(""))
+    // git.diff().setPathFilter(TreeFilter)
+    val status = git.status().call()
+    val uncommitted = status.getUncommittedChanges.relevantPaths
+    require(uncommitted.isEmpty)
+    require(status.getUntracked.relevantPaths.isEmpty)
+    val remoteUris = git.remoteList().call().asScala.head.getURIs.asScala
+    println(remoteUris)
+    val headCommit = git.getRepository.resolve(Constants.HEAD)
+    println(headCommit)
     ???
   }
 }

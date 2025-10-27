@@ -53,6 +53,8 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
     }
   }
 
+  GitSpec.forPathInThisRepo("sample-project/device-fs")
+
   val gitSource = GitSource(
     token,
     GitSpec(
