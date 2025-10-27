@@ -32,9 +32,9 @@ given ReadWriter[GpioPin] = readwriter[Int].bimap[GpioPin](_.number, GpioPin(_))
 
 
 case class GitSpec(gitUrl: String, commitId: ObjectId) derives ReadWriter {
-  require(gitUrl.startsWith("git://") && gitUrl.endsWith(".git"))
+  // require(gitUrl.startsWith("git://") && gitUrl.endsWith(".git"))
 
-  val httpsGitUrl: String = "https" + gitUrl.stripPrefix("git")
+  // val httpsGitUrl: String = "https" + gitUrl.stripPrefix("git")
 }
 
 object GitSpec {
@@ -53,7 +53,7 @@ object GitSpec {
     println(remoteUris)
     val headCommit = git.getRepository.resolve(Constants.HEAD)
     println(headCommit)
-    ???
+    GitSpec(remoteUris.head.toString, headCommit)
   }
 }
 
