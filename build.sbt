@@ -58,7 +58,7 @@ lazy val worker = (project in file("worker")).dependsOn(common).enablePlugins(Ja
 
 lazy val root = (project in file(".")).aggregate(common, worker, client).settings(
   publish / skip := true,
-  // releaseVersion := ReleaseVersion.fromAggregatedAssessedCompatibilityWithLatestRelease().value,
+  releaseVersion := ReleaseVersion.fromAggregatedAssessedCompatibilityWithLatestRelease().value,
   releaseProcess := Seq[ReleaseStep](
     checkSnapshotDependencies,
     inquireVersions,
