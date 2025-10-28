@@ -26,9 +26,6 @@ jobs:
       - uses: guardian/setup-scala@v1
       - name: Build and Test
         run: sbt -v +test
-      - name: What is up
-        run: ls -la
-
       - uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/logic-capture-github-actions-client"
