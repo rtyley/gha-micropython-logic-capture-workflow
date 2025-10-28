@@ -104,10 +104,11 @@ object AutomatedDeployAndCapture {
 
   // eg "/dev/ttyACM0"
   def getUsbSystemPortPath(usbId: UsbId): IO[Option[String]] = 
-    EitherT(retryingOnFailures(IO.blocking(SerialPort.getCommPorts.find(_.usbId.contains(usbId)).map(_.getSystemPortPath)))(
-      limitRetriesByCumulativeDelay(4.seconds, fullJitter[IO](100.millis)),
-      retryUntilSuccessful(_.isDefined, log = ResultHandler.noop)
-    )).merge
+    IO.sleep(540.millis) >> // Fastest seen is 548ms
+      EitherT(retryingOnFailures(IO.blocking(SerialPort.getCommPorts.find(_.usbId.contains(usbId)).map(_.getSystemPortPath)))(
+        limitRetriesByCumulativeDelay(4.seconds, fullJitter[IO](10.millis)),
+        retryUntilSuccessful(_.isDefined, log = ResultHandler.noop)
+      )).merge
 
   private def captureProcessResource(captureFilePaths: CaptureFilePaths): Resource[IO, SubProcess] = Resource.fromAutoCloseable(
     for {
