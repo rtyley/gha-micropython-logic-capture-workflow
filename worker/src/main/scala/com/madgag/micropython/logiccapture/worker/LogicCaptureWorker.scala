@@ -11,6 +11,7 @@ import com.madgag.micropython.logiccapture.logTime
 import com.madgag.micropython.logiccapture.model.GusmanBConfigSupport.*
 import com.madgag.micropython.logiccapture.model.{CaptureResult, ExecuteAndCaptureDef, GitSource, JobDef, JobOutput}
 import com.madgag.micropython.logiccapture.worker.LogicCaptureWorker.{failFor, thresholds}
+import com.madgag.micropython.logiccapture.worker.PicoResetControl.ResetTime.logTimeSR
 import com.madgag.micropython.logiccapture.worker.aws.{ActivityWorker, Heartbeat}
 import com.madgag.micropython.logiccapture.worker.git.BearerAuthTransportConfig
 import com.madgag.micropython.logiccapture.worker.git.BearerAuthTransportConfig.bearerAuth
@@ -77,7 +78,7 @@ class LogicCaptureWorker(picoResetControl: PicoResetControl, board: BoardDef) ex
         res <- fs2.Stream(jobDef.execs *).zipWithIndex.covary[IO].parEvalMap(2) { (executeAndCapture, index) =>
           CaptureFilePaths.setupFor(tempDir / s"capture-$index", executeAndCapture.capture).logTime(s"Capture $index: files setup").map(_ -> executeAndCapture)
         }.evalMap { (captureFilePaths, executeAndCapture) =>
-          picoResetControl.reset() >> AutomatedDeployAndCapture.execAndCap(executeAndCapture, captureFilePaths, sourceDir).logTime(s"execAndCap ${captureFilePaths.results}")
+          picoResetControl.reset.flatMap(implicit resetTime => AutomatedDeployAndCapture.execAndCap(executeAndCapture, captureFilePaths, sourceDir).logTimeSR(s"execAndCap ${captureFilePaths.results}"))
         }.parEvalMap(4) { captureProcessReport =>
           for {
             _ <- heartbeat.send()

@@ -15,6 +15,8 @@ import com.madgag.micropython.logiccapture.aws.Fail
 import com.madgag.micropython.logiccapture.model.*
 import com.madgag.micropython.logiccapture.model.GusmanBConfigSupport.*
 import com.madgag.micropython.logiccapture.worker.AutomatedDeployAndCapture.{compactCapture, waitALimitedTimeForTerminationOf}
+import com.madgag.micropython.logiccapture.worker.PicoResetControl.ResetTime
+import com.madgag.micropython.logiccapture.worker.PicoResetControl.ResetTime.{logTimeSR, sleepUntilAfterReset}
 import com.madgag.micropython.logiccapture.worker.serialport.*
 import com.madgag.micropython.logiccapture.{TimeExpectation, logTime}
 import os.*
@@ -68,7 +70,7 @@ object AutomatedDeployAndCapture {
 //    captureResult <- execAndCap(executeAndCaptureDef, captureFilePaths, sourceDir).logTime("execAndCap")
 //  } yield captureResult
 
-  def execAndCap(executeAndCaptureDef: ExecuteAndCaptureDef, captureFilePaths: CaptureFilePaths, sourceDir: Path): IO[CaptureProcessReport] =
+  def execAndCap(executeAndCaptureDef: ExecuteAndCaptureDef, captureFilePaths: CaptureFilePaths, sourceDir: Path)(using ResetTime): IO[CaptureProcessReport] =
     execAndCapture(
       CaptureContext(executeAndCaptureDef.capture, captureFilePaths),
       ExecContext(executeAndCaptureDef.execution, sourceDir)
@@ -77,13 +79,13 @@ object AutomatedDeployAndCapture {
   private def execAndCapture(
     captureContext: CaptureContext,
     execContext: ExecContext
-  ): IO[CaptureProcessReport] = (for {
-    captureProcess <- captureProcessResource(captureContext.paths)
+  )(using ResetTime): IO[CaptureProcessReport] = (for {
+    captureProcess <- captureProcessResource(captureContext.paths) // we _should_ ensure that the capture process is ready before the program executes
     mpremoteProcess <- mpremoteProcessResource(execContext)
   } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
     println(s"Well, I got mpremoteProcess=$mpremoteProcess & captureProcess=$captureProcess")
     for {
-      captureHasTerminated <- waitALimitedTimeForTerminationOf(captureProcess, captureContext.captureDef).logTime("waiting for termination")
+      captureHasTerminated <- waitALimitedTimeForTerminationOf(captureProcess, captureContext.captureDef).logTimeSR("waiting for termination")
     } yield CaptureProcessReport(captureProcess.stdout.trim(), Option.when(captureHasTerminated)(captureContext))
   }
 
@@ -92,7 +94,7 @@ object AutomatedDeployAndCapture {
       dur => IO.blocking(captureProcess.waitFor(dur.toMillis))
     }
 
-  private def mpremoteProcessResource(execContext: ExecContext): Resource[IO, SubProcess] =
+  private def mpremoteProcessResource(execContext: ExecContext)(using ResetTime): Resource[IO, SubProcess] =
     Resource.fromAutoCloseable(IO.blocking {
       os.proc(
         "mpremote",
@@ -100,27 +102,27 @@ object AutomatedDeployAndCapture {
         "mount", execContext.mountFolder,
         "exec", execContext.executionDef.exec
       ).spawn(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
-    }.logTime("Creating mpremote process"))
+    }.logTimeSR("Creating mpremote process"))
 
   // eg "/dev/ttyACM0"
-  def getUsbSystemPortPath(usbId: UsbId): IO[Option[String]] = 
-    IO.sleep(540.millis) >> // Fastest seen is 548ms
+  def getUsbSystemPortPath(usbId: UsbId)(using resetTime: ResetTime): IO[Option[String]] =
+    sleepUntilAfterReset(540.millis) >> // Fastest seen is 548ms
       EitherT(retryingOnFailures(IO.blocking(SerialPort.getCommPorts.find(_.usbId.contains(usbId)).map(_.getSystemPortPath)))(
         limitRetriesByCumulativeDelay(4.seconds, fullJitter[IO](10.millis)),
         retryUntilSuccessful(_.isDefined, log = ResultHandler.noop)
       )).merge
 
-  private def captureProcessResource(captureFilePaths: CaptureFilePaths): Resource[IO, SubProcess] = Resource.fromAutoCloseable(
+  private def captureProcessResource(captureFilePaths: CaptureFilePaths)(using ResetTime): Resource[IO, SubProcess] = Resource.fromAutoCloseable(
     for {
-      systemPortPath <- getUsbSystemPortPath(GusmanBUsbId).logTime("getUsbSystemPortPath")
+      systemPortPath <- getUsbSystemPortPath(GusmanBUsbId).logTimeSR("getUsbSystemPortPath")
       _ <- IO.println(s"Detected GusmanB systemPortPath=$systemPortPath")
-      subProcess <- captureProcessFor(captureFilePaths, systemPortPath.get).logTime("creating captureProcessFor") // TODO !
+      subProcess <- captureProcessFor(captureFilePaths, systemPortPath.get).logTimeSR("creating captureProcessFor") // TODO - maybe start recording time since Pico reset?
     } yield subProcess
   ).evalTap { cap =>
     IO.blocking {
       val str = cap.stdout.readLine()
       println(s"Cap gave me $str")
-    }.logTime("Terminal first line")
+    }.logTimeSR("Terminal first line")
   }
 
   private def captureProcessFor(captureFilePaths: CaptureFilePaths, systemPortPath: String) = 
