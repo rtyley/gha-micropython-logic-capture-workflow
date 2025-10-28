@@ -29,7 +29,7 @@ jobs:
       - name: What is up
         run: ls -la
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/logic-capture-github-actions-client"
           aws-region: eu-west-1
