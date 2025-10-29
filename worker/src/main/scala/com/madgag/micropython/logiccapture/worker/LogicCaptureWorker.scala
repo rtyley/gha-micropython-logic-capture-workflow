@@ -72,7 +72,7 @@ class LogicCaptureWorker(picoResetControl: PicoResetControl, board: BoardDef) ex
 
   override def process(jobDef: JobDef)(using heartbeat: Heartbeat): EitherT[IO, Fail, JobOutput] = {
     thresholds.flatMap(_.failFor(jobDef)).headOption.orElse(failFor(jobDef, board)).fold {
-      val tempDir: Path = os.temp.dir(prefix = "pico-logic-capture-")
+      val tempDir: Path = os.temp.dir(dir = "/dev/shm", prefix = "pico-logic-capture-")
       EitherT.right(for {
         sourceDir <- cloneRepo(jobDef.sourceDef, tempDir / "repo")
         res <- fs2.Stream(jobDef.execs *).zipWithIndex.covary[IO].parEvalMap(2) { (executeAndCapture, index) =>
