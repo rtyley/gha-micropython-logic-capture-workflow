@@ -89,9 +89,7 @@ class LogicCaptureWorker(picoResetControl: PicoResetControl, board: BoardDef) ex
     }(EitherT.leftT(_))
   }
 
-  // .flatTap(_ => heartbeat.send()).logTime(s"Capture $index")
-
-  def cloneRepo(gitSource: GitSource, repoContainerDir: Path)(using heartbeat: Heartbeat): IO[Path] = IO {
+  def cloneRepo(gitSource: GitSource, repoContainerDir: Path)(using heartbeat: Heartbeat): IO[Path] = IO.blocking {
     val cloneableUrl = gitSource.gitSpec.httpsGitUrl
     println(s"going to try to clone '$cloneableUrl' to $repoContainerDir")
     val repository = Git.cloneRepository()

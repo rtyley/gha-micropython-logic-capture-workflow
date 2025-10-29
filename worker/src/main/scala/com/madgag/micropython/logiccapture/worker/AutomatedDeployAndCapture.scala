@@ -10,15 +10,14 @@ import com.madgag.logic.fileformat.Foo
 import com.madgag.logic.fileformat.gusmanb.{GusmanBCaptureCSV, GusmanBConfig}
 import com.madgag.logic.fileformat.saleae.csv.SaleaeCsv
 import com.madgag.logic.{ChannelMapping, GpioPin, TimeParser}
+import com.madgag.micropython.logiccapture.TimeExpectation
 import com.madgag.micropython.logiccapture.TimeExpectation.timeVsExpectation
 import com.madgag.micropython.logiccapture.aws.Fail
 import com.madgag.micropython.logiccapture.model.*
 import com.madgag.micropython.logiccapture.model.GusmanBConfigSupport.*
-import com.madgag.micropython.logiccapture.worker.AutomatedDeployAndCapture.{compactCapture, waitALimitedTimeForTerminationOf}
 import com.madgag.micropython.logiccapture.worker.PicoResetControl.ResetTime
 import com.madgag.micropython.logiccapture.worker.PicoResetControl.ResetTime.{logTimeSR, sleepUntilAfterReset}
 import com.madgag.micropython.logiccapture.worker.serialport.*
-import com.madgag.micropython.logiccapture.{TimeExpectation, logTime}
 import os.*
 import retry.*
 import retry.ResultHandler.*
@@ -28,8 +27,6 @@ import java.io.StringWriter
 import java.nio.file.Files
 import java.time.Duration
 import scala.concurrent.duration.*
-import scala.io.Source
-import scala.util.Try
 
 case class CaptureFilePaths(captureDir: Path) {
   val gusmanbConfig: Path = captureDir / "captureDef.tcs"
