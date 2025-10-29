@@ -1,13 +1,12 @@
 package com.example
 
 import cats.effect.unsafe.implicits.global
+import com.gu.time.duration.formatting.*
 import com.madgag.logic.fileformat.gusmanb.GusmanBConfig
 import com.madgag.logic.{ChannelMapping, GpioPin}
 import com.madgag.micropython.logiccapture.aws.{AWS, AWSIO}
 import com.madgag.micropython.logiccapture.client.RemoteCaptureClient
-import com.gu.time.duration.formatting.*
 import com.madgag.micropython.logiccapture.model.*
-import org.eclipse.jgit.lib.ObjectId
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -53,8 +52,6 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
     }
   }
 
-  GitSpec.forPathInThisRepo("sample-project/device-fs")
-
   val gitSource = GitSource(token, GitSpec.forPathInThisRepo("sample-project/device-fs"))
 
   private def jobDef(freqSamples: Seq[FreqSample]) = JobDef(
@@ -65,8 +62,6 @@ class TestFunk extends AnyFlatSpec with Matchers with ScalaFutures with Inspecto
         CaptureDef(
           Sampling(frequency = fs.freq, preTriggerSamples = 512, postTriggerSamples = fs.samples),
           SortedSet.from((2 to 8).map(GpioPin(_))),
-          // SortedSet.from((2 to 22) ++ (26 to 28)).map(GpioPin(_)),
-          // Trigger.Edge(GpioPin(2), goingTo = false)
           Trigger.Pattern(BitVector.bits(Seq(false, false, true)), GpioPin(2))
         )
       )
