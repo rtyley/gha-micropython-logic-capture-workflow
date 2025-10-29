@@ -1,4 +1,0 @@
-mountFolder: "device-fs"
-startImport: "pio_blink"
-
-captureDef: "ht-capture.tcs"

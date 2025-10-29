@@ -13,7 +13,6 @@ on:
     - cron: "29 */6 * * *"
 
 
-
 jobs:
   test:
     runs-on: ubuntu-latest
