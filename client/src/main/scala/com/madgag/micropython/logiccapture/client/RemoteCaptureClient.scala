@@ -67,9 +67,21 @@ class RemoteCaptureClient(
   private def startExecutionOf(jobDef: JobDef): IO[StartExecutionResponse] = IO.println(s"gitSpec: ${jobDef.sourceDef.gitSpec}") >>
     awsIo.glurk(StartExecutionRequest.builder().stateMachineArn(stateMachineArn).input(write(jobDef)).build())(_.startExecution)
 
+
+  /**
+   * Currently the micropython-logic-capture project is designed to have a single trusted user. Partly this is because
+   * we allow arbitrary python code to be executed on the Pico, and arbitrary code can
+   *
+   * Unfortunately, calls like these are a cross-user security risk for us. The call allows (in fact, defaults to) returning
+   * the execution data passed to the step function, and there is nothing to prevent access to other users executions
+   * (other than the obscurity of the executionArn). A possible workaround would be to asymmetrically encrypt all user
+   * data - ideally both input and output - though that makes
+   */
   private def describeExecutionOf(executionArn: String): IO[DescribeExecutionResponse] =
     awsIo.glurk(DescribeExecutionRequest.builder().executionArn(executionArn).build())(_.describeExecution)
 
+  private def getExecutionHistory(executionArn: String): IO[GetExecutionHistoryResponse] =
+    awsIo.glurk(GetExecutionHistoryRequest.builder().executionArn(executionArn).build())(_.getExecutionHistory)
 }
 
 object RemoteCaptureClient {
