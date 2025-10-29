@@ -79,9 +79,7 @@ object AutomatedDeployAndCapture {
   )(using ResetTime): IO[CaptureProcessReport] = (for {
     captureProcess <- captureProcessResource(captureContext.paths) // we _should_ ensure that the capture process is ready before the program executes
     mpremoteProcess <- mpremoteProcessResource(execContext)
-  } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) =>
-    println(s"Well, I got mpremoteProcess=$mpremoteProcess & captureProcess=$captureProcess")
-    for {
+  } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) => for {
       captureHasTerminated <- waitALimitedTimeForTerminationOf(captureProcess, captureContext.captureDef).logTimeSR("waiting for termination")
     } yield CaptureProcessReport(captureProcess.stdout.trim(), Option.when(captureHasTerminated)(captureContext))
   }
@@ -103,9 +101,9 @@ object AutomatedDeployAndCapture {
 
   // eg "/dev/ttyACM0"
   def getUsbSystemPortPath(usbId: UsbId)(using resetTime: ResetTime): IO[Option[String]] =
-    sleepUntilAfterReset(540.millis) >> // Fastest seen is 548ms
-      EitherT(retryingOnFailures(IO.blocking(SerialPort.getCommPorts.find(_.usbId.contains(usbId)).map(_.getSystemPortPath)))(
-        limitRetriesByCumulativeDelay(4.seconds, fullJitter[IO](10.millis)),
+    sleepUntilAfterReset(600.millis) >> // Fastest seen is 604ms
+      EitherT(retryingOnFailures(IO.blocking(SerialPort.getCommPorts.find(_.usbId.contains(usbId)).map(_.getSystemPortPath)).logTimeSR("Checking for USB system port"))(
+        limitRetriesByCumulativeDelay(4.seconds, fullJitter[IO](5.millis)),
         retryUntilSuccessful(_.isDefined, log = ResultHandler.noop)
       )).merge
 

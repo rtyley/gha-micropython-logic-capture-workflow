@@ -29,9 +29,7 @@ object GitSpec {
     }
 
     val remoteUris = git.remoteList().call().asScala.head.getURIs.asScala
-    println(remoteUris)
     val headCommit = git.getRepository.resolve(Constants.HEAD)
-    println(headCommit)
     GitSpec(httpsGitUrlFor(remoteUris.head), headCommit)
   }
   

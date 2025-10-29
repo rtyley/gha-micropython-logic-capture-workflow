@@ -97,8 +97,7 @@ class LogicCaptureWorker(picoResetControl: PicoResetControl, board: BoardDef) ex
       .setTransportConfigCallback(bearerAuth(gitSource.githubToken))
       .setDirectory(repoContainerDir.toIO).setURI(cloneableUrl.toString).call().getRepository.asInstanceOf[FileRepository]
 
-    println(s"Clone is done, right? $repository")
     os.Path(repository.getWorkTree)
 
-  }.flatTap(_ => heartbeat.send())
+  }.logTime("Cloning repo").flatTap(_ => heartbeat.send())
 }
