@@ -2,7 +2,7 @@ package com.madgag.micropython.logiccapture.model
 
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.{Constants, ObjectId}
-import org.eclipse.jgit.transport.URIish
+import org.eclipse.jgit.transport.{RefSpec, URIish}
 import os.SubPath
 import sttp.model.Uri
 import upickle.default.*
@@ -38,6 +38,13 @@ object GitSpec {
     val uri = Uri.apply(githubURI.getHost).scheme("https").withWholePath(githubURI.getPath)
     if (uri.path.last.endsWith(".git")) uri else uri.withWholePath(uri.pathToString + ".git")
   }
+
+  // git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +ff60d3969262bc1c9b2df6b5989517fa08c463e7:refs/remotes/pull/1/merge
+
+  /**
+   * See also https://github.com/actions/checkout/blob/ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493/src/ref-helper.ts#L87-L106
+   */
+  def refSpecToFetch(commitId: ObjectId): RefSpec = new RefSpec(commitId.name())
 }
 
 case class GitSpec(httpsGitUrl: Uri, commitId: ObjectId) derives ReadWriter {

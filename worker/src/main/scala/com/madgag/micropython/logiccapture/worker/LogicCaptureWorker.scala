@@ -7,18 +7,20 @@ import cats.syntax.all.*
 import com.gu.time.duration.formatting.*
 import com.madgag.logic.fileformat.gusmanb.{BoardDef, GusmanBConfig, SamplingIssue}
 import com.madgag.micropython.logiccapture.aws.Fail
+import com.madgag.micropython.logiccapture.git.BearerAuthTransportConfig
 import com.madgag.micropython.logiccapture.logTime
 import com.madgag.micropython.logiccapture.model.GusmanBConfigSupport.*
-import com.madgag.micropython.logiccapture.model.{CaptureResult, ExecuteAndCaptureDef, GitSource, JobDef, JobOutput}
+import com.madgag.micropython.logiccapture.model.{CaptureResult, ExecuteAndCaptureDef, GitSource, GitSpec, JobDef, JobOutput}
 import com.madgag.micropython.logiccapture.worker.LogicCaptureWorker.{failFor, thresholds}
 import com.madgag.micropython.logiccapture.worker.PicoResetControl.ResetTime.logTimeSR
 import com.madgag.micropython.logiccapture.worker.aws.{ActivityWorker, Heartbeat}
-import com.madgag.micropython.logiccapture.worker.git.BearerAuthTransportConfig
-import com.madgag.micropython.logiccapture.worker.git.BearerAuthTransportConfig.bearerAuth
+import BearerAuthTransportConfig.bearerAuth
+import com.madgag.micropython.logiccapture.model.GitSource.authWith
+import com.madgag.micropython.logiccapture.model.GitSpec.refSpecToFetch
 import com.madgag.scala.collection.decorators.MapDecorator
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.internal.storage.file.FileRepository
-import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+import org.eclipse.jgit.transport.{RefSpec, URIish, UsernamePasswordCredentialsProvider}
 import os.Path
 
 import java.time.Duration
@@ -89,21 +91,27 @@ class LogicCaptureWorker(picoResetControl: PicoResetControl, board: BoardDef) ex
     }(EitherT.leftT(_))
   }
 
-  def cloneRepo(gitSource: GitSource, repoContainerDir: Path)(using heartbeat: Heartbeat): IO[Path] = IO.blocking {
+  def cloneRepo(gitSource: GitSource, repoContainerDir: os.Path)(using heartbeat: Heartbeat): IO[Path] = IO.blocking {
     val cloneableUrl = gitSource.gitSpec.httpsGitUrl
-    println(s"going to try to clone '$cloneableUrl' to $repoContainerDir")
-    val git = Git.cloneRepository()
-      .setCredentialsProvider(new UsernamePasswordCredentialsProvider("x-access-token", gitSource.githubToken))
-      .setTransportConfigCallback(bearerAuth(gitSource.githubToken))
-      .setDirectory(repoContainerDir.toIO).setURI(cloneableUrl.toString).call()
 
-    val commitId = gitSource.gitSpec.commitId.name()
+    val repoDir = repoContainerDir / "repo"
+
+    println(s"going to try to clone '$cloneableUrl' to $repoDir")
+
+    val git = Git.init().setDirectory(repoDir.toIO).call()
+    git.remoteAdd().setName("origin").setUri(new URIish(cloneableUrl.toString)).call()
+
+    val commitId = gitSource.gitSpec.commitId
     println(commitId)
-    git.checkout().setName(commitId).call()
+
+    val fetchResult = git.fetch().authWith(gitSource).setRefSpecs(refSpecToFetch(commitId)).call()
+
+    println(s"fetchResult=$fetchResult")
+
+    git.checkout().setName(commitId.name()).call()
 
     val repository = git.getRepository.asInstanceOf[FileRepository]
 
-    os.Path(repository.getWorkTree)
-
+    repoDir
   }.logTime("Cloning repo").flatTap(_ => heartbeat.send())
 }

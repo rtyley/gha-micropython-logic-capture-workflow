@@ -1,6 +1,7 @@
 package com.madgag.micropython.logiccapture.model
 
-import com.madgag.micropython.logiccapture.model.GitSpec.httpsGitUrlFor
+import com.madgag.micropython.logiccapture.model.GitSpec.{httpsGitUrlFor, refSpecToFetch}
+import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.transport.URIish
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -16,6 +17,11 @@ class GitSpecTest extends AnyFlatSpec with Matchers {
 
     // GitHub Actions, using actions/checkout to clone the repo: eg as seen at https://github.com/rtyley/gha-micropython-logic-capture-workflow/actions/runs/18840309511/job/53750790552#step:7:34
     httpsGitUrlFor(new URIish("https://github.com/rtyley/gha-micropython-logic-capture-workflow")) shouldBe httpsGitUri
+  }
+
+  it should "give a refspec that can be used to fetch a specific commit" in {
+    val refSpec = refSpecToFetch(ObjectId.fromString("ff60d3969262bc1c9b2df6b5989517fa08c463e7"))
+    refSpec.toString shouldBe "ff60d3969262bc1c9b2df6b5989517fa08c463e7"
   }
 
 //  it should "reject clone urls which are not in the correct git-url format" in {

@@ -1,4 +1,4 @@
-package com.madgag.micropython.logiccapture.worker.git
+package com.madgag.micropython.logiccapture.git
 
 import org.eclipse.jgit.api.TransportConfigCallback
 import org.eclipse.jgit.transport.TransportHttp
