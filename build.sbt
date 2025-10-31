@@ -9,6 +9,8 @@ val scalaTest = "org.scalatest" %% "scalatest" % "3.2.19" % Test
 
 ThisBuild / scalacOptions := Seq("-deprecation", "-release:21")
 
+val weaverCats = "org.typelevel" %% "weaver-cats" % "0.10.1"  % Test
+
 val artifactProducingSettings = Seq(
   organization := "com.madgag.logic-capture",
   licenses := Seq(License.Apache2),
@@ -49,6 +51,7 @@ lazy val worker = (project in file("worker")).dependsOn(common).enablePlugins(Ja
     packageDescription := "Description for Pico Logic Capture worker",
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "os-lib" % "0.11.5",
+      weaverCats,
       scalaTest
     ) ++ Seq("core", "plugin-raspberrypi", "plugin-gpiod").map(a => "com.pi4j" % s"pi4j-$a" % "3.0.3")
 

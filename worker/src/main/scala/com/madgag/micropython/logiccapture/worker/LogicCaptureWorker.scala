@@ -91,27 +91,6 @@ class LogicCaptureWorker(picoResetControl: PicoResetControl, board: BoardDef) ex
     }(EitherT.leftT(_))
   }
 
-  def cloneRepo(gitSource: GitSource, repoContainerDir: os.Path)(using heartbeat: Heartbeat): IO[Path] = IO.blocking {
-    val cloneableUrl = gitSource.gitSpec.httpsGitUrl
-
-    val repoDir = repoContainerDir / "repo"
-
-    println(s"going to try to clone '$cloneableUrl' to $repoDir")
-
-    val git = Git.init().setDirectory(repoDir.toIO).call()
-    git.remoteAdd().setName("origin").setUri(new URIish(cloneableUrl.toString)).call()
-
-    val commitId = gitSource.gitSpec.commitId
-    println(commitId)
-
-    val fetchResult = git.fetch().authWith(gitSource).setRefSpecs(refSpecToFetch(commitId)).call()
-
-    println(s"fetchResult=$fetchResult")
-
-    git.checkout().setName(commitId.name()).call()
-
-    val repository = git.getRepository.asInstanceOf[FileRepository]
-
-    repoDir
-  }.logTime("Cloning repo").flatTap(_ => heartbeat.send())
+  def cloneRepo(gitSource: GitSource, repoContainerDir: os.Path)(using heartbeat: Heartbeat): IO[Path] = 
+    GitRepoFetcher.fetch(gitSource, repoContainerDir).flatTap(_ => heartbeat.send())
 }
