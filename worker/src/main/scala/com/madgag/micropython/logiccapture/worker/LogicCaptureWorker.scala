@@ -92,10 +92,16 @@ class LogicCaptureWorker(picoResetControl: PicoResetControl, board: BoardDef) ex
   def cloneRepo(gitSource: GitSource, repoContainerDir: Path)(using heartbeat: Heartbeat): IO[Path] = IO.blocking {
     val cloneableUrl = gitSource.gitSpec.httpsGitUrl
     println(s"going to try to clone '$cloneableUrl' to $repoContainerDir")
-    val repository = Git.cloneRepository()
+    val git = Git.cloneRepository()
       .setCredentialsProvider(new UsernamePasswordCredentialsProvider("x-access-token", gitSource.githubToken))
       .setTransportConfigCallback(bearerAuth(gitSource.githubToken))
-      .setDirectory(repoContainerDir.toIO).setURI(cloneableUrl.toString).call().getRepository.asInstanceOf[FileRepository]
+      .setDirectory(repoContainerDir.toIO).setURI(cloneableUrl.toString).call()
+
+    val commitId = gitSource.gitSpec.commitId.name()
+    println(commitId)
+    git.checkout().setName(commitId).call()
+
+    val repository = git.getRepository.asInstanceOf[FileRepository]
 
     os.Path(repository.getWorkTree)
 
