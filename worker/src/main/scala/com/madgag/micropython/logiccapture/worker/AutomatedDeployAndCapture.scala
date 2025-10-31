@@ -81,12 +81,15 @@ object AutomatedDeployAndCapture {
     mpremoteProcess <- mpremoteProcessResource(execContext)
   } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) => for {
       captureHasTerminated <- waitALimitedTimeForTerminationOf(captureProcess, captureContext.captureDef).logTimeSR("waiting for termination")
-    } yield CaptureProcessReport(captureProcess.stdout.trim(), Option.when(captureHasTerminated)(captureContext))
+      captureOutput <- IO.blocking(captureProcess.stdout.trim()).timeoutAndForget(100.millis)
+  } yield CaptureProcessReport(captureOutput, Option.when(captureHasTerminated)(captureContext))
   }
 
-  private def waitALimitedTimeForTerminationOf(captureProcess: SubProcess, captureDef: CaptureDef) =
+  private def waitALimitedTimeForTerminationOf(captureProcess: SubProcess, captureDef: CaptureDef): IO[Boolean] =
     timeVsExpectation(Duration.ofSeconds(4).plus(captureDef.sampling.postTriggerDuration.multipliedBy(3).dividedBy(2))) {
-      dur => IO.blocking(captureProcess.waitFor(dur.toMillis))
+      dur => IO.blocking(captureProcess.waitFor(dur.toMillis)).flatTap { _ =>
+        IO.blocking(captureProcess.destroy(100, false))
+      }
     }
 
   private def mpremoteProcessResource(execContext: ExecContext)(using ResetTime): Resource[IO, SubProcess] =
