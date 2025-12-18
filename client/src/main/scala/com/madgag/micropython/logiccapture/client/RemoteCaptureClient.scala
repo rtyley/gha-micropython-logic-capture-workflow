@@ -64,7 +64,7 @@ class RemoteCaptureClient(
     )
   }
 
-  private def startExecutionOf(jobDef: JobDef): IO[StartExecutionResponse] = IO.println(s"gitSpec: ${jobDef.sourceDef.gitSpec}") >>
+  private def startExecutionOf(jobDef: JobDef): IO[StartExecutionResponse] =
     awsIo.glurk(StartExecutionRequest.builder().stateMachineArn(stateMachineArn).input(write(jobDef)).build())(_.startExecution)
 
 
@@ -94,14 +94,14 @@ object RemoteCaptureClient {
 
     case class Unfinished(lastExecutionStatus: ExecutionStatus) extends Error
 
-    def from(resultOfAllRetries: Either[DescribeExecutionResponse, DescribeExecutionResponse]): Either[Error, JobOutput] = resultOfAllRetries.fold(
-      unfinished => Left(Unfinished(unfinished.status)),
-      finished =>
-        println(finished.output)
-        Either.cond(
-        finished.status == SUCCEEDED,
-        read[JobOutput](finished.output),
-        Failed(Fail(finished.error, finished.cause)))
+    def from(resultOfAllRetries: Either[DescribeExecutionResponse, DescribeExecutionResponse]): Either[Error, JobOutput] =
+      resultOfAllRetries.fold(
+        unfinished => Left(Unfinished(unfinished.status)),
+        finished =>
+          Either.cond(
+          finished.status == SUCCEEDED,
+          read[JobOutput](finished.output),
+          Failed(Fail(finished.error, finished.cause)))
       )
   }
 }

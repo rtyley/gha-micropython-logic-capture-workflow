@@ -11,10 +11,8 @@ import java.util.concurrent.CompletableFuture
 class AWSIO[Client <: AwsClient, Req <: AwsRequest](client: Client) {
 
   def glurk[A <: Req, B](request: A)(f: Client => A => CompletableFuture[B]): IO[B] =
-    IO(println(s"Sending $request")) >> IO.fromCompletableFuture(IO(f(client)(request)))
+    IO(println(s"Sending ${request.getClass.getSimpleName}")) >> IO.fromCompletableFuture(IO(f(client)(request)))
 
-//  def burk[B, Resp](building: B => B)(f: Client => Consumer[B] => CompletableFuture[Resp]): IO[Resp] =
-//    IO(println(s"Sending")) >> IO.fromCompletableFuture(IO(f(client)(request)))
 }
 
 

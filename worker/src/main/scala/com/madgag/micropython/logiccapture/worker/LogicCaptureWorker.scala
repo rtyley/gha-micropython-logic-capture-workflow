@@ -7,24 +7,19 @@ import cats.syntax.all.*
 import com.gu.time.duration.formatting.*
 import com.madgag.logic.fileformat.gusmanb.{BoardDef, GusmanBConfig, SamplingIssue}
 import com.madgag.micropython.logiccapture.aws.Fail
-import com.madgag.micropython.logiccapture.git.BearerAuthTransportConfig
 import com.madgag.micropython.logiccapture.logTime
+import com.madgag.micropython.logiccapture.model.*
 import com.madgag.micropython.logiccapture.model.GusmanBConfigSupport.*
-import com.madgag.micropython.logiccapture.model.{CaptureResult, ExecuteAndCaptureDef, GitSource, GitSpec, JobDef, JobOutput}
-import com.madgag.micropython.logiccapture.worker.LogicCaptureWorker.{failFor, thresholds}
+import com.madgag.micropython.logiccapture.worker.LogicCaptureWorker.{WorkspaceParentFolder, failFor, formatter, thresholds}
 import com.madgag.micropython.logiccapture.worker.PicoResetControl.ResetTime.logTimeSR
 import com.madgag.micropython.logiccapture.worker.aws.{ActivityWorker, Heartbeat}
-import BearerAuthTransportConfig.bearerAuth
-import com.madgag.micropython.logiccapture.model.GitSource.authWith
-import com.madgag.micropython.logiccapture.model.GitSpec.refSpecToFetch
 import com.madgag.scala.collection.decorators.MapDecorator
-import org.eclipse.jgit.api.Git
-import org.eclipse.jgit.internal.storage.file.FileRepository
-import org.eclipse.jgit.transport.{RefSpec, URIish, UsernamePasswordCredentialsProvider}
 import os.Path
 
-import java.time.Duration
 import java.time.Duration.ofSeconds
+import java.time.ZoneOffset.UTC
+import java.time.format.DateTimeFormatter
+import java.time.{Duration, Instant, ZoneOffset}
 import scala.collection.immutable.SortedMap
 import scala.math.Ordering.Implicits.*
 
@@ -32,6 +27,10 @@ object LogicCaptureWorker {
   val MaxExecutions: Int = 50
   val MaxTotalExecutionTime: Duration = ofSeconds(270)
   val MaxCaptureTime: Duration = ofSeconds(70) // aligns with heartbeat: we send one after every capture
+
+  val WorkspaceParentFolder: os.Path = "/dev/shm/pico-logic-capture-workspace"
+
+  val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HHmm'Z'").withZone(UTC)
 
   case class ExecutionThreshold[T: Ordering](errorCode: String, max: T, failDescription: JobDef => Option[Any]) {
     def failFor(jobDef: JobDef): Option[Fail] = for {
@@ -74,7 +73,8 @@ class LogicCaptureWorker(picoResetControl: PicoResetControl, board: BoardDef) ex
 
   override def process(jobDef: JobDef)(using heartbeat: Heartbeat): EitherT[IO, Fail, JobOutput] = {
     thresholds.flatMap(_.failFor(jobDef)).headOption.orElse(failFor(jobDef, board)).fold {
-      val tempDir: Path = os.temp.dir(dir = "/dev/shm", prefix = "pico-logic-capture-")
+      os.makeDir.all(WorkspaceParentFolder)
+      val tempDir: Path = os.temp.dir(WorkspaceParentFolder, prefix = s"${formatter.format(Instant.now())}-")
       EitherT.right(for {
         sourceDir <- cloneRepo(jobDef.sourceDef, tempDir / "repo")
         res <- fs2.Stream(jobDef.execs *).zipWithIndex.covary[IO].parEvalMap(2) { (executeAndCapture, index) =>
