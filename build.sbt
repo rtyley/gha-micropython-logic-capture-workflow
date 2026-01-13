@@ -28,7 +28,7 @@ lazy val common = (project in file("common")).settings(artifactProducingSettings
     "org.typelevel" %% "cats-effect" % "3.6.3",
     "com.github.cb372" %% "cats-retry" % "4.0.0",
     "co.fs2" %% "fs2-io" % "3.12.2",
-    "com.madgag" %% "logic-signals" % "5.1.0",
+    "com.madgag" %% "logic-signals" % "6.0.0-PREVIEW.validate-signals.2026-01-13T1946.9d4fb8fd",
     scalaTest
   )
 )
