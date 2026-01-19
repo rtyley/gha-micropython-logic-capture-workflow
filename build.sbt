@@ -3,13 +3,13 @@ import sbtversionpolicy.withsbtrelease.ReleaseVersion
 
 ThisBuild / scalaVersion := "3.3.6"
 
-val awsSdkVersion = "2.36.3"
+val awsSdkVersion = "2.41.10"
 
 val scalaTest = "org.scalatest" %% "scalatest" % "3.2.19" % Test
 
 ThisBuild / scalacOptions := Seq("-deprecation", "-release:21")
 
-val weaverCats = "org.typelevel" %% "weaver-cats" % "0.10.1"  % Test
+val weaverCats = "org.typelevel" %% "weaver-cats" % "0.11.3"  % Test
 
 val artifactProducingSettings = Seq(
   organization := "com.madgag.logic-capture",
@@ -19,11 +19,11 @@ val artifactProducingSettings = Seq(
 
 lazy val common = (project in file("common")).settings(artifactProducingSettings).settings(
   libraryDependencies ++= Seq(
-    "org.eclipse.jgit" % "org.eclipse.jgit" % "7.4.0.202509020913-r",
-    "com.softwaremill.sttp.client4" %% "core" % "4.0.13",
-    "com.fazecast" % "jSerialComm" % "2.11.2",
+    "org.eclipse.jgit" % "org.eclipse.jgit" % "7.5.0.202512021534-r",
+    "com.softwaremill.sttp.client4" %% "core" % "4.0.14",
+    "com.fazecast" % "jSerialComm" % "2.11.4",
     "software.amazon.awssdk" % "sfn" % awsSdkVersion,
-    "com.lihaoyi" %% "upickle" % "4.4.0",
+    "com.lihaoyi" %% "upickle" % "4.4.2",
     "com.gu.duration-formatting" %% "core" % "0.0.2",
     "org.typelevel" %% "cats-effect" % "3.6.3",
     "com.github.cb372" %% "cats-retry" % "4.0.0",
@@ -50,7 +50,7 @@ lazy val worker = (project in file("worker")).dependsOn(common).enablePlugins(Ja
     packageSummary := "Pico Logic Capture worker",
     packageDescription := "Description for Pico Logic Capture worker",
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "os-lib" % "0.11.5",
+      "com.lihaoyi" %% "os-lib" % "0.11.6",
       weaverCats,
       scalaTest
     ) ++ Seq("core", "plugin-raspberrypi", "plugin-gpiod").map(a => "com.pi4j" % s"pi4j-$a" % "3.0.3")
