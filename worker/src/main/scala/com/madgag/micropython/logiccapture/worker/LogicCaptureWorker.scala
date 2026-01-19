@@ -75,12 +75,13 @@ class LogicCaptureWorker(picoResetControl: PicoResetControl, board: BoardDef) ex
 
   override def process(jobDef: JobDef)(using heartbeat: Heartbeat): EitherT[IO, Fail, JobOutput] = {
     thresholds.flatMap(_.failFor(jobDef)).headOption.orElse(failFor(jobDef, board)).fold {
-      os.makeDir.all(WorkspaceParentFolder)
       val now = Instant.now()
+      val tempParent = WorkspaceParentFolder / dateFormatter.format(now)
+      os.makeDir.all(tempParent)
       os.list(WorkspaceParentFolder)
         .filter(p => Try(dateFormatter.parse(p.last, Instant.from)).exists(Duration.between(_, now) > ofDays(7)))
         .foreach(os.remove.all(_, ignoreErrors = true))
-      val tempDir: Path = os.temp.dir(WorkspaceParentFolder / dateFormatter.format(now), prefix = s"${timeFormatter.format(now)}-")
+      val tempDir: Path = os.temp.dir(tempParent, prefix = s"${timeFormatter.format(now)}-")
       EitherT.right(for {
         sourceDir <- cloneRepo(jobDef.sourceDef, tempDir / "repo")
         res <- fs2.Stream(jobDef.execs *).zipWithIndex.covary[IO].parEvalMap(2) { (executeAndCapture, index) =>
