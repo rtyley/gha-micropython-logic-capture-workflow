@@ -10,18 +10,19 @@ import com.madgag.micropython.logiccapture.aws.Fail
 import com.madgag.micropython.logiccapture.logTime
 import com.madgag.micropython.logiccapture.model.*
 import com.madgag.micropython.logiccapture.model.GusmanBConfigSupport.*
-import com.madgag.micropython.logiccapture.worker.LogicCaptureWorker.{WorkspaceParentFolder, failFor, formatter, thresholds}
+import com.madgag.micropython.logiccapture.worker.LogicCaptureWorker.{WorkspaceParentFolder, dateFormatter, failFor, thresholds, timeFormatter}
 import com.madgag.micropython.logiccapture.worker.PicoResetControl.ResetTime.logTimeSR
 import com.madgag.micropython.logiccapture.worker.aws.{ActivityWorker, Heartbeat}
 import com.madgag.scala.collection.decorators.MapDecorator
 import os.Path
 
-import java.time.Duration.ofSeconds
+import java.time.Duration.{ofDays, ofSeconds}
 import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
 import java.time.{Duration, Instant, ZoneOffset}
 import scala.collection.immutable.SortedMap
 import scala.math.Ordering.Implicits.*
+import scala.util.Try
 
 object LogicCaptureWorker {
   val MaxExecutions: Int = 50
@@ -30,7 +31,8 @@ object LogicCaptureWorker {
 
   val WorkspaceParentFolder: os.Path = "/dev/shm/pico-logic-capture-workspace"
 
-  val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HHmm'Z'").withZone(UTC)
+  val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(UTC)
+  val timeFormatter = DateTimeFormatter.ofPattern("HHmm'Z'").withZone(UTC)
 
   case class ExecutionThreshold[T: Ordering](errorCode: String, max: T, failDescription: JobDef => Option[Any]) {
     def failFor(jobDef: JobDef): Option[Fail] = for {
@@ -74,7 +76,11 @@ class LogicCaptureWorker(picoResetControl: PicoResetControl, board: BoardDef) ex
   override def process(jobDef: JobDef)(using heartbeat: Heartbeat): EitherT[IO, Fail, JobOutput] = {
     thresholds.flatMap(_.failFor(jobDef)).headOption.orElse(failFor(jobDef, board)).fold {
       os.makeDir.all(WorkspaceParentFolder)
-      val tempDir: Path = os.temp.dir(WorkspaceParentFolder, prefix = s"${formatter.format(Instant.now())}-")
+      val now = Instant.now()
+      os.list(WorkspaceParentFolder)
+        .filter(p => Try(dateFormatter.parse(p.last, Instant.from)).exists(Duration.between(_, now) > ofDays(7)))
+        .foreach(os.remove.all(_, ignoreErrors = true))
+      val tempDir: Path = os.temp.dir(WorkspaceParentFolder / dateFormatter.format(now), prefix = s"${timeFormatter.format(now)}-")
       EitherT.right(for {
         sourceDir <- cloneRepo(jobDef.sourceDef, tempDir / "repo")
         res <- fs2.Stream(jobDef.execs *).zipWithIndex.covary[IO].parEvalMap(2) { (executeAndCapture, index) =>
