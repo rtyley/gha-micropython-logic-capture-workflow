@@ -86,7 +86,7 @@ object AutomatedDeployAndCapture {
   }
 
   private def waitALimitedTimeForTerminationOf(captureProcess: SubProcess, captureDef: CaptureDef): IO[Boolean] =
-    timeVsExpectation(Duration.ofSeconds(4).plus(captureDef.sampling.postTriggerDuration.multipliedBy(3).dividedBy(2))) {
+    timeVsExpectation(Duration.ofSeconds(20).plus(captureDef.sampling.postTriggerDuration.multipliedBy(3).dividedBy(2))) {
       dur => IO.blocking(captureProcess.waitFor(dur.toMillis)).flatTap { terminated =>
         IO.println(s"captureProcess terminated=$terminated") >>
         IO.blocking(captureProcess.destroy(100, false))
