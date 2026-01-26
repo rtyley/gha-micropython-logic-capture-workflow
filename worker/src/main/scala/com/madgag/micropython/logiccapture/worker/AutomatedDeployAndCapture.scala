@@ -10,7 +10,6 @@ import com.madgag.logic.fileformat.Foo
 import com.madgag.logic.fileformat.gusmanb.{GusmanBCaptureCSV, GusmanBConfig}
 import com.madgag.logic.fileformat.saleae.csv.SaleaeCsv
 import com.madgag.logic.{ChannelMapping, GpioPin, TimeParser}
-import com.madgag.micropython.logiccapture.TimeExpectation
 import com.madgag.micropython.logiccapture.TimeExpectation.timeVsExpectation
 import com.madgag.micropython.logiccapture.aws.Fail
 import com.madgag.micropython.logiccapture.model.*
@@ -26,6 +25,7 @@ import retry.RetryPolicies.*
 import java.io.StringWriter
 import java.nio.file.Files
 import java.time.Duration
+import java.time.Duration.ofNanos
 import scala.concurrent.duration.*
 
 case class CaptureFilePaths(captureDir: Path) {
@@ -86,12 +86,20 @@ object AutomatedDeployAndCapture {
   }
 
   private def waitALimitedTimeForTerminationOf(captureProcess: SubProcess, captureDef: CaptureDef)(using ResetTime): IO[Boolean] =
-    timeVsExpectation(Duration.ofSeconds(20).plus(captureDef.sampling.postTriggerDuration.multipliedBy(3).dividedBy(2))) {
+    timeVsExpectation(reasonableExecutionTimeFor(captureDef)) {
       dur => IO.blocking(captureProcess.waitFor(dur.toMillis)).flatTap { terminated =>
         IO.println(s"captureProcess terminated=$terminated") >>
         IO.blocking(captureProcess.destroy(100, false))
       }
     }.logTimeSR(s"waiting for termination (samples=${captureDef.sampling.totalSamples})")
+
+  private def reasonableExecutionTimeFor(captureDef: CaptureDef): Duration = {
+    val reasonableMaxTimeForProgramToTriggerCapture = Duration.ofSeconds(5)
+    val timeToWriteOutSamples = ofNanos(5000).multipliedBy(captureDef.sampling.totalSamples) // generous for large quantities
+
+    reasonableMaxTimeForProgramToTriggerCapture plus
+      captureDef.sampling.postTriggerDuration plus timeToWriteOutSamples
+  }
 
   private def mpremoteProcessResource(execContext: ExecContext)(using ResetTime): Resource[IO, SubProcess] =
     Resource.fromAutoCloseable(IO.blocking {
