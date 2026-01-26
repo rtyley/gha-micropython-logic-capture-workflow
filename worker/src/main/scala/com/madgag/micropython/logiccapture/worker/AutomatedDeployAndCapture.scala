@@ -87,7 +87,8 @@ object AutomatedDeployAndCapture {
 
   private def waitALimitedTimeForTerminationOf(captureProcess: SubProcess, captureDef: CaptureDef): IO[Boolean] =
     timeVsExpectation(Duration.ofSeconds(4).plus(captureDef.sampling.postTriggerDuration.multipliedBy(3).dividedBy(2))) {
-      dur => IO.blocking(captureProcess.waitFor(dur.toMillis)).flatTap { _ =>
+      dur => IO.blocking(captureProcess.waitFor(dur.toMillis)).flatTap { terminated =>
+        IO.println(s"captureProcess terminated=$terminated") >>
         IO.blocking(captureProcess.destroy(100, false))
       }
     }
@@ -126,18 +127,24 @@ object AutomatedDeployAndCapture {
   private def captureProcessFor(captureFilePaths: CaptureFilePaths, systemPortPath: String) = 
     IO(os.proc("TerminalCapture", "capture", systemPortPath, captureFilePaths.gusmanbConfig, captureFilePaths.results).spawn())
 
-  def compactCapture(captureContext: CaptureContext): IO[Option[String]] = OptionT.whenF(Files.exists(captureContext.paths.results.toNIO)) {
-    val gusmanBConfig = captureContext.captureDef.toGusmanB
-    val channelMapping = ChannelMapping[GpioPin](gusmanBConfig.captureChannels.map(cc => cc.channelName -> cc.channelNumber.gpioPin) *)
-    val csvDetails = GusmanBCaptureCSV.csvDetails(gusmanBConfig.sampleIntervalDuration, channelMapping)
+  def compactCapture(captureContext: CaptureContext): IO[Option[String]] = {
+    val results = captureContext.paths.results
+    IO.blocking(!Files.exists(results.toNIO)).ifM(
+      IO.println("No capture results found").as(None), {
+        val gusmanBConfig = captureContext.captureDef.toGusmanB
+        val channelMapping = ChannelMapping[GpioPin](gusmanBConfig.captureChannels.map(cc => cc.channelName -> cc.channelNumber.gpioPin) *)
+        val csvDetails = GusmanBCaptureCSV.csvDetails(gusmanBConfig.sampleIntervalDuration, channelMapping)
 
-    IO.blocking {
-      val signals = Foo.read(csvDetails.format)(CSVReader.open(captureContext.paths.results.toIO))
-      println(s"signals.summary=${signals.summary}")
-      val writer = new StringWriter()
-      Foo.write(signals, SaleaeCsv.csvDetails(TimeParser.DeltaParser, channelMapping))(CSVWriter.open(writer)(SaleaeCsv.CsvFormat))
-      writer.toString
-    }
-  }.value
+        for {
+          signals <- IO.blocking(Foo.read(csvDetails.format)(CSVReader.open(results.toIO)))
+          _ <- IO.println(s"signals.summary=${signals.summary}")
+        } yield Some {
+          val writer = new StringWriter()
+          Foo.write(signals, SaleaeCsv.csvDetails(TimeParser.DeltaParser, channelMapping))(CSVWriter.open(writer)(SaleaeCsv.CsvFormat))
+          writer.toString
+        }
+      }
+    )
+  }
 
 }

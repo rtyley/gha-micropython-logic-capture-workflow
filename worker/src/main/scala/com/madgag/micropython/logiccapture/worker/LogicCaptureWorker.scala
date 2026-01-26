@@ -91,7 +91,10 @@ class LogicCaptureWorker(picoResetControl: PicoResetControl, board: BoardDef) ex
         }.parEvalMap(4) { captureProcessReport =>
           for {
             _ <- heartbeat.send()
-            compactCap <- captureProcessReport.detailsForCompletedCapture.flatTraverse(AutomatedDeployAndCapture.compactCapture).logTime("parsing capture result")
+            compactCap <- captureProcessReport.detailsForCompletedCapture
+              .flatTraverse(captureContext =>
+                AutomatedDeployAndCapture.compactCapture(captureContext).logTime("parsing capture result")
+              )
           } yield CaptureResult(captureProcessReport.processOutput, compactCap)
         }.compile.toList
       } yield res) // TODO return fail... if appropriate
