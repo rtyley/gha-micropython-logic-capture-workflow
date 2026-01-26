@@ -80,18 +80,18 @@ object AutomatedDeployAndCapture {
     captureProcess <- captureProcessResource(captureContext.paths) // we _should_ ensure that the capture process is ready before the program executes
     mpremoteProcess <- mpremoteProcessResource(execContext)
   } yield (mpremoteProcess, captureProcess)).use { case (mpremoteProcess, captureProcess) => for {
-      captureHasTerminated <- waitALimitedTimeForTerminationOf(captureProcess, captureContext.captureDef).logTimeSR("waiting for termination")
+      captureHasTerminated <- waitALimitedTimeForTerminationOf(captureProcess, captureContext.captureDef)
       captureOutput <- IO.blocking(captureProcess.stdout.trim()).timeoutAndForget(100.millis)
   } yield CaptureProcessReport(captureOutput, Option.when(captureHasTerminated)(captureContext))
   }
 
-  private def waitALimitedTimeForTerminationOf(captureProcess: SubProcess, captureDef: CaptureDef): IO[Boolean] =
+  private def waitALimitedTimeForTerminationOf(captureProcess: SubProcess, captureDef: CaptureDef)(using ResetTime): IO[Boolean] =
     timeVsExpectation(Duration.ofSeconds(20).plus(captureDef.sampling.postTriggerDuration.multipliedBy(3).dividedBy(2))) {
       dur => IO.blocking(captureProcess.waitFor(dur.toMillis)).flatTap { terminated =>
         IO.println(s"captureProcess terminated=$terminated") >>
         IO.blocking(captureProcess.destroy(100, false))
       }
-    }
+    }.logTimeSR(s"waiting for termination (samples=${captureDef.sampling.totalSamples})")
 
   private def mpremoteProcessResource(execContext: ExecContext)(using ResetTime): Resource[IO, SubProcess] =
     Resource.fromAutoCloseable(IO.blocking {
