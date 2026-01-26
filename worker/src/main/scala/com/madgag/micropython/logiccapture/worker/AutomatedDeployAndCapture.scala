@@ -19,6 +19,7 @@ import com.madgag.micropython.logiccapture.worker.PicoResetControl.ResetTime
 import com.madgag.micropython.logiccapture.worker.PicoResetControl.ResetTime.{logTimeSR, sleepUntilAfterReset}
 import com.madgag.micropython.logiccapture.worker.serialport.*
 import os.*
+import os.PathConvertible.JavaIoFileConvertible
 import retry.*
 import retry.ResultHandler.*
 import retry.RetryPolicies.*
@@ -149,8 +150,9 @@ object AutomatedDeployAndCapture {
           fileSize <- IO.blocking(resultsFile.length())
           signals <- IO.blocking(Foo.read(csvDetails.format)(CSVReader.open(resultsFile)))
           compactCsv = compactCsvFor(signals, channelMapping)
-          compressed = StoreCompressed(compactCsv).asCompressed.length
-          _ <- IO.println(s"fileSize=$fileSize\ncompactCsv=${compactCsv.length}\ncompressed=$compressed\nsignals.summary=${signals.summary}")
+          rawCompressed = StoreCompressed(Files.readString(resultsFile.toPath)).asCompressed.length
+          compactCompressed = StoreCompressed(compactCsv).asCompressed.length
+          _ <- IO.println(s"fileSize=$fileSize\nrawCompressed=$rawCompressed\ncompactCsv=${compactCsv.length}\ncompressed=$compactCompressed\nsignals.summary=${signals.summary}")
         } yield Some(compactCsv)
       }
     )
