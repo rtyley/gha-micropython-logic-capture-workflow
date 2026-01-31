@@ -36,7 +36,7 @@ class RemoteCaptureClient(
   def capture[C](jobDef: JobDef, channelMapping: ChannelMapping[C]): EitherT[IO,Error,Seq[Option[ChannelSignals[Delta, C]]]] = for {
     startExecutionResponse <- EitherT.right(startExecutionOf(jobDef))
     conclusion <- findConclusionOfExecution(startExecutionResponse.executionArn, jobDef.minimumTotalExecutionTime)
-  } yield conclusion.map(_.capturedData.map(parseSaleaeCsv(channelMapping, _)))
+  } yield conclusion.map(_.capturedData.map(sc => parseSaleaeCsv(channelMapping, sc.uncompressed)))
 
   private def parseSaleaeCsv[C](channelMapping: ChannelMapping[C], capData: String) = {
     val csvDetails = SaleaeCsv.csvDetails(DeltaParser, channelMapping)

@@ -95,7 +95,7 @@ class LogicCaptureWorker(picoResetControl: PicoResetControl, board: BoardDef) ex
               .flatTraverse(captureContext =>
                 AutomatedDeployAndCapture.compactCapture(captureContext).logTime("parsing capture result")
               )
-          } yield CaptureResult(captureProcessReport.processOutput, compactCap)
+          } yield CaptureResult(captureProcessReport.processOutput, compactCap.map(StoreCompressed(_)))
         }.compile.toList
       } yield res) // TODO return fail... if appropriate
     }(EitherT.leftT(_))
