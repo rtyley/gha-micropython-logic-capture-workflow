@@ -24,8 +24,8 @@ object GitSpec {
       val status = git.status().call()
       val uncommitted = status.getUncommittedChanges.relevantPaths
       val untracked = status.getUntracked.relevantPaths
-      require(uncommitted.isEmpty)
-      require(untracked.isEmpty)
+      require(uncommitted.isEmpty, s"Uncommited files under $path: $uncommitted")
+      require(untracked.isEmpty, s"Untracked files under $path: $untracked")
     }
 
     val remoteUris = git.remoteList().call().asScala.head.getURIs.asScala
