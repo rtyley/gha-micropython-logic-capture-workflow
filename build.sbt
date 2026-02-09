@@ -28,7 +28,7 @@ lazy val common = (project in file("common")).settings(artifactProducingSettings
     "org.typelevel" %% "cats-effect" % "3.6.3",
     "com.github.cb372" %% "cats-retry" % "4.0.0",
     "co.fs2" %% "fs2-io" % "3.12.2",
-    "com.madgag" %% "logic-signals" % "10.0.0",
+    "com.madgag" %% "logic-signals" % "11.0.0",
     scalaTest
   )
 )
@@ -50,7 +50,7 @@ lazy val worker = (project in file("worker")).dependsOn(common).enablePlugins(Ja
     packageSummary := "Pico Logic Capture worker",
     packageDescription := "Description for Pico Logic Capture worker",
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "os-lib" % "0.11.6",
+      "com.lihaoyi" %% "os-lib" % "0.11.8",
       weaverCats,
       scalaTest
     ) ++ Seq("core", "plugin-raspberrypi", "plugin-gpiod").map(a => "com.pi4j" % s"pi4j-$a" % "3.0.3")
