@@ -6,11 +6,12 @@ import cats.effect.{IO, Resource}
 import com.fazecast.jSerialComm.SerialPort
 import com.github.tototoshi.csv.{CSVReader, CSVWriter}
 import com.gu.time.duration.formatting.*
-import com.madgag.logic.Time.Delta
 import com.madgag.logic.fileformat.Foo
 import com.madgag.logic.fileformat.gusmanb.{GusmanBCaptureCSV, GusmanBConfig}
 import com.madgag.logic.fileformat.saleae.csv.SaleaeCsv
-import com.madgag.logic.{ChannelMapping, ChannelSignals, GpioPin, TimeParser}
+import com.madgag.logic.time.Time.Delta
+import com.madgag.logic.time.TimeParser
+import com.madgag.logic.{ChannelMapping, ChannelSignals, GpioPin}
 import com.madgag.micropython.logiccapture.TimeExpectation.timeVsExpectation
 import com.madgag.micropython.logiccapture.aws.Fail
 import com.madgag.micropython.logiccapture.model.*
@@ -19,7 +20,6 @@ import com.madgag.micropython.logiccapture.worker.PicoResetControl.ResetTime
 import com.madgag.micropython.logiccapture.worker.PicoResetControl.ResetTime.{logTimeSR, sleepUntilAfterReset}
 import com.madgag.micropython.logiccapture.worker.serialport.*
 import os.*
-import os.PathConvertible.JavaIoFileConvertible
 import retry.*
 import retry.ResultHandler.*
 import retry.RetryPolicies.*

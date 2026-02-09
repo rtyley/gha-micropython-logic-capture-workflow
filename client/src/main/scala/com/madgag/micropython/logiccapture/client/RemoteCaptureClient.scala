@@ -3,13 +3,13 @@ package com.madgag.micropython.logiccapture.client
 import cats.*
 import cats.data.*
 import cats.effect.IO
-import cats.syntax.all.*
 import com.github.tototoshi.csv.CSVReader
-import com.madgag.logic.Time.Delta
-import com.madgag.logic.TimeParser.DeltaParser
+import com.gu.time.duration.formatting.*
 import com.madgag.logic.fileformat.Foo
 import com.madgag.logic.fileformat.saleae.csv.SaleaeCsv
-import com.madgag.logic.{ChannelMapping, ChannelSignals, Time, TimeParser}
+import com.madgag.logic.time.Time.Delta
+import com.madgag.logic.time.TimeParser.DeltaParser
+import com.madgag.logic.{ChannelMapping, ChannelSignals}
 import com.madgag.micropython.logiccapture.TimeExpectation
 import com.madgag.micropython.logiccapture.aws.{AWSIO, Fail}
 import com.madgag.micropython.logiccapture.client.RemoteCaptureClient.{Error, UnfinishedExecutionStates}
@@ -21,7 +21,6 @@ import software.amazon.awssdk.services.sfn.SfnAsyncClient
 import software.amazon.awssdk.services.sfn.model.*
 import software.amazon.awssdk.services.sfn.model.ExecutionStatus.{PENDING_REDRIVE, RUNNING, SUCCEEDED}
 import upickle.default.*
-import com.gu.time.duration.formatting.*
 
 import java.time.Duration
 import scala.concurrent.duration.*
