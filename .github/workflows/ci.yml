@@ -25,7 +25,7 @@ jobs:
       - uses: guardian/setup-scala@v1
       - name: Build and Test
         run: sbt -v +test
-      - uses: aws-actions/configure-aws-credentials@v5
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/logic-capture-github-actions-client"
           aws-region: eu-west-1
