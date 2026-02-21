@@ -150,8 +150,7 @@ object AutomatedDeployAndCapture {
           fileSize <- IO.blocking(resultsFile.length())
           signals <- IO.blocking(Foo.read(csvDetails.format)(CSVReader.open(resultsFile)))
           compactCsv = compactCsvFor(signals, channelMapping)
-          compactCompressed = StoreCompressed(compactCsv).asCompressed.length
-          _ <- IO.println(s"fileSize=$fileSize\ncompactCsv=${compactCsv.length}\ncompactCompressed=$compactCompressed\nsignals.summary=${signals.summary}")
+          _ <- IO.println(s"fileSize=$fileSize\ncompactCsv=${compactCsv.length}\nsignals.summary=${signals.summary}")
         } yield Some(compactCsv)
       }
     )
