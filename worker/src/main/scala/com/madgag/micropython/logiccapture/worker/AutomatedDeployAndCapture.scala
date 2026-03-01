@@ -108,6 +108,7 @@ object AutomatedDeployAndCapture {
       os.proc(
         "mpremote",
         "connect", "id:560ca184b37d9ae2",
+        "rtc", "--set",
         "mount", execContext.mountFolder,
         "exec", execContext.executionDef.exec
       ).spawn(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
