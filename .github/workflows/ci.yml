@@ -24,13 +24,13 @@ jobs:
         uses: actions/checkout@v7
       - uses: guardian/setup-scala@v2
       - name: Build and Test
-        run: sbt -v +test
+        run: sbt -v +testFull
       - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/logic-capture-github-actions-client"
           aws-region: eu-west-1
       - name: Run sample integration test
-        run: sbt "sample / test"
+        run: sbt "sample / testFull"
         env:
           LOGIC_CAPTURE_AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
           LOGIC_CAPTURE_REPO_CLONE_GITHUB_TOKEN: ${{ github.token }}
