@@ -15,17 +15,17 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
     permissions:
       id-token: write   # This is required for requesting the JWT
       contents: read    # This is required for actions/checkout
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - uses: guardian/setup-scala@v1
+      - uses: guardian/setup-scala@v2
       - name: Build and Test
         run: sbt -v +test
-      - uses: aws-actions/configure-aws-credentials@v5
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/logic-capture-github-actions-client"
           aws-region: eu-west-1
@@ -33,7 +33,7 @@ jobs:
         run: sbt "sample / test"
         env:
           LOGIC_CAPTURE_AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-          LOGIC_CAPTURE_REPO_CLONE_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LOGIC_CAPTURE_REPO_CLONE_GITHUB_TOKEN: ${{ github.token }}
 
       - name: Test Summary
         uses: test-summary/action@v2
