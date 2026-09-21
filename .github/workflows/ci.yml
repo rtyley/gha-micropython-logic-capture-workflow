@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v7
       - uses: guardian/setup-scala@v2
       - name: Build and Test
-        run: sbt -v +testFull
+        run: sbt -v "+testFull ; shutdown"
       - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/logic-capture-github-actions-client"
