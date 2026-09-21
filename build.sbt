@@ -1,15 +1,15 @@
 import ReleaseTransformations.*
 import sbtversionpolicy.withsbtrelease.ReleaseVersion
 
-ThisBuild / scalaVersion := "3.3.7"
+ThisBuild / scalaVersion := "3.9.0"
 
 val awsSdkVersion = "2.42.4"
 
-val scalaTest = "org.scalatest" %% "scalatest" % "3.2.19" % Test
+val scalaTest = "org.scalatest" %% "scalatest" % "3.2.20" % Test
 
 ThisBuild / scalacOptions := Seq("-deprecation", "-release:21")
 
-val weaverCats = "org.typelevel" %% "weaver-cats" % "0.11.3"  % Test
+val weaverCats = "org.typelevel" %% "weaver-cats" % "0.13.0"  % Test
 
 val artifactProducingSettings = Seq(
   organization := "com.madgag.logic-capture",
@@ -19,15 +19,15 @@ val artifactProducingSettings = Seq(
 
 lazy val common = (project in file("common")).settings(artifactProducingSettings).settings(
   libraryDependencies ++= Seq(
-    "org.eclipse.jgit" % "org.eclipse.jgit" % "7.5.0.202512021534-r",
-    "com.softwaremill.sttp.client4" %% "core" % "4.0.19",
+    "org.eclipse.jgit" % "org.eclipse.jgit" % "7.8.0.202609011348-r",
+    "com.softwaremill.sttp.client4" %% "core" % "4.0.26",
     "com.fazecast" % "jSerialComm" % "2.11.4",
     "software.amazon.awssdk" % "sfn" % awsSdkVersion,
     "com.lihaoyi" %% "upickle" % "4.4.3",
     "com.gu.duration-formatting" %% "core" % "0.0.2",
-    "org.typelevel" %% "cats-effect" % "3.6.3",
+    "org.typelevel" %% "cats-effect" % "3.7.1",
     "com.github.cb372" %% "cats-retry" % "4.0.0",
-    "co.fs2" %% "fs2-io" % "3.12.2",
+    "co.fs2" %% "fs2-io" % "3.14.0",
     "com.madgag" %% "logic-signals" % "14.0.0",
     scalaTest
   )
@@ -38,7 +38,7 @@ lazy val client = (project in file("client")).dependsOn(common).settings(artifac
 lazy val sample = (project in file("sample-project")).dependsOn(client).settings(
   libraryDependencies ++= Seq(
     scalaTest,
-    "org.typelevel" %% "cats-effect-testkit" % "3.6.3" % Test
+    "org.typelevel" %% "cats-effect-testkit" % "3.7.1" % Test
   )
 )
 
@@ -53,7 +53,7 @@ lazy val worker = (project in file("worker")).dependsOn(common).enablePlugins(Ja
       "com.lihaoyi" %% "os-lib" % "0.11.8",
       weaverCats,
       scalaTest
-    ) ++ Seq("core", "plugin-raspberrypi", "plugin-gpiod").map(a => "com.pi4j" % s"pi4j-$a" % "3.0.3")
+    ) ++ Seq("core", "plugin-raspberrypi", "plugin-gpiod").map(a => "com.pi4j" % s"pi4j-$a" % "3.0.4")
 
     // Debian / debianPackageDependencies ++= Seq("openjdk-17-jdk-headless")
   )
