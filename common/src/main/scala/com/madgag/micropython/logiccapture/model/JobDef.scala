@@ -62,7 +62,7 @@ case class ExecutionDef(mountFolder: SubPath, exec: String) derives ReadWriter
 
 case class ExecuteAndCaptureDef(execution: ExecutionDef, capture: CaptureDef) derives ReadWriter
 
-given Monoid[Duration] = Monoid.instance(ZERO, _ plus _)
+given Monoid[Duration] = Monoid.instance(ZERO, _ `plus` _)
 
 case class JobDef(sourceDef: GitSource, execs: Seq[ExecuteAndCaptureDef]) derives ReadWriter {
   val minimumTotalExecutionTime: Duration = execs.foldMap(_.capture.sampling.postTriggerDuration.plusSeconds(4)).plusSeconds(3)

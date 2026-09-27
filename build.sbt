@@ -3,11 +3,11 @@ import sbtversionpolicy.withsbtrelease.ReleaseVersion
 
 ThisBuild / scalaVersion := "3.9.0"
 
-val awsSdkVersion = "2.42.4"
+val awsSdkVersion = "2.55.6"
 
 val scalaTest = "org.scalatest" %% "scalatest" % "3.2.20" % Test
 
-ThisBuild / scalacOptions := Seq("-deprecation", "-release:21")
+ThisBuild / scalacOptions := Seq("-deprecation", "-release:25")
 
 val weaverCats = "org.typelevel" %% "weaver-cats" % "0.13.0"  % Test
 
@@ -20,7 +20,7 @@ val artifactProducingSettings = Seq(
 lazy val common = (project in file("common")).settings(artifactProducingSettings).settings(
   libraryDependencies ++= Seq(
     "org.eclipse.jgit" % "org.eclipse.jgit" % "7.8.0.202609011348-r",
-    "com.softwaremill.sttp.client4" %% "core" % "4.0.26",
+    "com.softwaremill.sttp.client4" %% "core" % "4.0.27",
     "com.fazecast" % "jSerialComm" % "2.11.4",
     "software.amazon.awssdk" % "sfn" % awsSdkVersion,
     "com.lihaoyi" %% "upickle" % "4.4.3",
@@ -28,7 +28,7 @@ lazy val common = (project in file("common")).settings(artifactProducingSettings
     "org.typelevel" %% "cats-effect" % "3.7.1",
     "com.github.cb372" %% "cats-retry" % "4.0.0",
     "co.fs2" %% "fs2-io" % "3.14.0",
-    "com.madgag" %% "logic-signals" % "14.0.0",
+    "com.madgag" %% "logic-signals" % "14.0.1",
     scalaTest
   )
 )

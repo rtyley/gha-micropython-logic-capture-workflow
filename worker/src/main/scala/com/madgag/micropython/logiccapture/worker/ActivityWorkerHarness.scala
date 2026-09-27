@@ -7,7 +7,7 @@ import com.madgag.micropython.logiccapture.worker.aws.StepFuncClient.GetTaskResp
 import upickle.default.*
 
 class ActivityWorkerHarness[In: Reader, Out: Writer](activityWorker: ActivityWorker[In, Out]) {
-  def handleTask(task: GetTaskResponse): IO[_] = {
+  def handleTask(task: GetTaskResponse): IO[?] = {
     val lease = task.lease
     activityWorker.process(read[In](task.input))(using lease.heartbeat).foldF(
       lease.sendFail,

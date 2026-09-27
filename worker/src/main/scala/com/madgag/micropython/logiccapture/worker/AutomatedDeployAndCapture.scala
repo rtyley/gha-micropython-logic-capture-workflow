@@ -99,8 +99,8 @@ object AutomatedDeployAndCapture {
     val reasonableMaxTimeForProgramToTriggerCapture = Duration.ofSeconds(5)
     val timeToWriteOutSamples = ofNanos(5000).multipliedBy(captureDef.sampling.totalSamples) // generous for large quantities
 
-    reasonableMaxTimeForProgramToTriggerCapture plus
-      captureDef.sampling.postTriggerDuration plus timeToWriteOutSamples
+    Seq(reasonableMaxTimeForProgramToTriggerCapture, captureDef.sampling.postTriggerDuration, timeToWriteOutSamples)
+      .reduce(_ `plus` _)
   }
 
   private def mpremoteProcessResource(execContext: ExecContext)(using ResetTime): Resource[IO, SubProcess] =
@@ -159,7 +159,7 @@ object AutomatedDeployAndCapture {
 
   private def compactCsvFor(signals: ChannelSignals[Delta, GpioPin], channelMapping: ChannelMapping[GpioPin]) = {
     val writer = new StringWriter()
-    Foo.write(signals, SaleaeCsv.csvDetails(TimeParser.DeltaParser, channelMapping))(CSVWriter.open(writer)(SaleaeCsv.CsvFormat))
+    Foo.write(signals, SaleaeCsv.csvDetails(TimeParser.DeltaParser, channelMapping))(CSVWriter.open(writer)(using SaleaeCsv.CsvFormat))
     writer.toString
   }
 }
