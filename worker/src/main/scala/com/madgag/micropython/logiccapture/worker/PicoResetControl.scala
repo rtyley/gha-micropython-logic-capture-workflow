@@ -1,20 +1,20 @@
 package com.madgag.micropython.logiccapture.worker
 
 import cats.effect.{IO, Resource}
+import com.gu.time.duration.formatting.*
 import com.madgag.micropython.logiccapture.worker.PicoResetControl.ResetTime
 import com.pi4j.Pi4J
 import com.pi4j.boardinfo.util.BoardInfoHelper
 import com.pi4j.context.Context
 import com.pi4j.io.gpio.digital.{DigitalOutput, DigitalOutputProvider}
-import com.pi4j.plugin.gpiod.provider.gpio.digital.{GpioDDigitalInputProvider, GpioDDigitalOutput, GpioDDigitalOutputProvider}
+import com.pi4j.plugin.ffm.providers.gpio.FFMDigitalOutputProviderImpl
 
-import com.gu.time.duration.formatting.*
 import java.time.temporal.ChronoUnit.MILLIS
 import java.time.{Duration, Instant}
 import java.util.concurrent.CompletableFuture
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
-import scala.jdk.FutureConverters.*
 import scala.jdk.DurationConverters.*
+import scala.jdk.FutureConverters.*
 
 object PicoResetControl {
 
@@ -41,13 +41,12 @@ object PicoResetControl {
 
   val pi4JResource: Resource[IO, Context] = Resource.make {
     IO.blocking {
-      val digitalInputProvider = GpioDDigitalInputProvider.newInstance()
-      val digitalOutputProvider = GpioDDigitalOutputProvider.newInstance()
-
-      val pi4j: Context = Pi4J.newContextBuilder()
-        .add(digitalInputProvider, digitalOutputProvider)
+      val pi4j = Pi4J.newContextBuilder()
+        .noAutoDetect()
+        .add(new FFMDigitalOutputProviderImpl())
         .setGpioChipName("gpiochip0").build() // blocking IO
 
+      pi4j.providers().describe().print(System.out)
       println("Board model: " + pi4j.boardInfo.getBoardModel.getLabel)
       println("Operating system: " + pi4j.boardInfo.getOperatingSystem)
       println("Java versions: " + pi4j.boardInfo.getJavaInfo)
@@ -61,11 +60,11 @@ object PicoResetControl {
     }
   }(pi4j => IO.fromFuture(IO(pi4j.asyncShutdown().asInstanceOf[CompletableFuture[Unit]].asScala)))
 
-  def resetPinFor(pi4j: Context): IO[GpioDDigitalOutput] = IO.blocking {
+  def resetPinFor(pi4j: Context): IO[DigitalOutput] = IO.blocking {
     println("GONNA GET A RESET PIN I TELLS YA")
-    val gpioDDigitalOutputProvider: GpioDDigitalOutputProvider = pi4j.digitalOutput[GpioDDigitalOutputProvider]()
-    println(gpioDDigitalOutputProvider)
-    gpioDDigitalOutputProvider.create[GpioDDigitalOutput](21)
+    val digitalOutputProvider: DigitalOutputProvider = pi4j.digitalOutput[DigitalOutputProvider]()
+    println(digitalOutputProvider)
+    digitalOutputProvider.create[DigitalOutput](21)
   }
 
   val resource: Resource[IO, PicoResetControl] =

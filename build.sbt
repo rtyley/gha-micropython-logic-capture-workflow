@@ -3,7 +3,7 @@ import sbtversionpolicy.withsbtrelease.ReleaseVersion
 
 ThisBuild / scalaVersion := "3.9.0"
 
-val awsSdkVersion = "2.55.6"
+val awsSdkVersion = "2.55.14"
 
 val scalaTest = "org.scalatest" %% "scalatest" % "3.2.20" % Test
 
@@ -53,8 +53,8 @@ lazy val worker = (project in file("worker")).dependsOn(common).enablePlugins(Ja
       "com.lihaoyi" %% "os-lib" % "0.11.8",
       weaverCats,
       scalaTest
-    ) ++ Seq("core", "plugin-raspberrypi", "plugin-gpiod").map(a => "com.pi4j" % s"pi4j-$a" % "3.0.4")
-
+    ) ++ Seq("core", "plugin-ffm").map(a => "com.pi4j" % s"pi4j-$a" % "4.0.2"),
+    Universal / javaOptions += "-J--enable-native-access=ALL-UNNAMED"
     // Debian / debianPackageDependencies ++= Seq("openjdk-17-jdk-headless")
   )
 
